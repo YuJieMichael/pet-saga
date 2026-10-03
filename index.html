@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>梦幻灵宠 Pet Saga</title>
+<style>
+:root{--bg:#f4efe6;--card:#fff;--ink:#2a2420;--sub:#7d7068;--acc:#c8512b;--gold:#e0a31c;--line:#e6dccd;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1b1713;--card:#28211c;--ink:#f2e8dc;--sub:#a99c90;--line:#3b322a}}
+:root[data-theme="dark"]{--bg:#1b1713;--card:#28211c;--ink:#f2e8dc;--sub:#a99c90;--line:#3b322a}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,"PingFang SC","Microsoft YaHei",Arial,sans-serif;display:flex;justify-content:center;font-size:14px}
+#app{width:100%;max-width:460px;padding:12px}
+.top{display:flex;gap:8px;margin-bottom:8px}
+.pill{flex:1;background:var(--card);border-radius:12px;padding:8px;font-weight:700;text-align:center}
+.tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-bottom:10px}
+.tabs button{border:0;border-radius:10px;padding:9px 0;background:var(--card);color:var(--ink);font-size:10px;cursor:pointer}
+.tabs button.on{background:var(--acc);color:#fff;font-weight:700}
+.card{background:var(--card);border-radius:14px;padding:12px;margin-bottom:10px}
+.card h3{margin:0 0 8px;font-size:15px}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.pc{border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:6px 8px;text-align:center;min-width:64px;cursor:pointer;color:var(--ink);font-size:12px}
+.pc b{display:block;font-size:26px}
+.pc.sel{border-color:var(--acc)}.pc.gold{background:#f6e3a1;color:#3a2b00}
+button.b{border:0;border-radius:10px;padding:8px 12px;background:var(--acc);color:#fff;font-weight:700;cursor:pointer;font-size:13px}
+button.b.alt{background:var(--line);color:var(--ink)}
+button.b:disabled{opacity:.5}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px}
+.sub{color:var(--sub);font-size:12px}
+.at{display:flex;align-items:center;gap:4px;justify-content:space-between;padding:3px 0}
+.at button{border:0;border-radius:8px;background:var(--line);color:var(--ink);padding:3px 8px;font-size:12px;cursor:pointer}
+.at button:disabled{opacity:.4;cursor:default}
+.apt-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 12px;margin:10px 0}.apt-row{display:flex;flex-wrap:wrap;align-items:center;gap:4px;font-size:12px}.apt-info{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:50%;width:24px;height:24px;padding:0;background:var(--line);color:var(--sub);font-size:16px;cursor:pointer}.apt-info[aria-expanded="true"]{background:var(--acc);color:#fff}.apt-info:focus-visible{outline:2px solid var(--acc);outline-offset:2px}.apt-full{display:inline-block;padding:1px 4px;border-radius:5px;background:var(--gold);color:#3a2b00;font-size:10px;font-weight:700}.apt-help{padding:10px;border-radius:10px;background:var(--bg);line-height:1.7;margin-bottom:10px}
+.potion-settings{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px;margin-top:10px}.potion-setting{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px}.potion-setting .b{padding:6px 10px;font-size:12px}
+.bag-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.bag-item{background:var(--bg);border-radius:12px;padding:10px}.bag-item h3{display:flex;justify-content:space-between;gap:4px}.bag-item .sub{line-height:1.6;min-height:58px}.bag-item .row{margin-top:8px}.bag-item button.b{font-size:12px;padding:8px}.bag-picker{margin-top:8px}
+.tag{display:inline-block;background:var(--line);border-radius:8px;padding:2px 7px;margin:2px;font-size:12px}
+.tag.g{background:var(--gold);color:#3a2b00}
+.tag.bad{background:#a34242;color:#fff}
+.hb{height:10px;background:var(--line);border-radius:6px;overflow:hidden}
+.hf{height:100%;background:#4aa360;width:100%;transition:width .2s}.hf.e{background:#d4493b}
+.hb.mp{height:5px;margin-top:4px}.hf.m{background:#4d8bcc}.intent{display:block;color:var(--acc);font-size:11px;margin:5px 0;font-weight:700}.battle-help{line-height:1.7;margin-top:8px}.fc.ally-target{border-color:#4aa360;cursor:pointer}
+.arena{display:grid;grid-template-columns:1fr 1fr;gap:12px;text-align:center}
+.arena b{font-size:42px;display:block}
+#log{min-height:96px;font-size:12px;line-height:1.6;color:var(--sub);margin-top:8px}
+.team{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:4px 0 8px}.fc{background:var(--bg);border:2px solid transparent;border-radius:12px;padding:6px 2px;text-align:center;font-size:11px}.fc b{font-size:30px;display:block}.fc.dead{opacity:.35}.fc.cur{border-color:var(--gold)}.fc.tgt{border-color:var(--acc);cursor:pointer;animation:pl 1s infinite}@keyframes pl{50%{opacity:.6}}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#000d;color:#fff;padding:9px 16px;border-radius:20px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90%;text-align:center}
+#toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="top"><div class="pill" id="coins"></div><div class="pill" id="gems"></div></div>
+  <div class="tabs" id="tabs"></div>
+  <div id="main"></div>
+</div>
+<div id="toast"></div>
+<script>
+const SP=[{e:'🐲',n:'蛟龙',b:[1500,1100,3800,1500,1200]},{e:'🐢',n:'大海龟',b:[1000,1600,4600,1100,900]},{e:'🦝',n:'狸',b:[1100,1000,3400,2000,1500]},{e:'🐯',n:'老虎',b:[1600,1200,4000,1000,1300]},{e:'🦅',n:'飞燕',b:[1300,900,3300,1300,1700]},{e:'🐸',n:'巨蛙',b:[1200,1400,4800,1200,1000]},{e:'🦌',n:'灵鹿',b:[1300,1400,4600,2200,1700]},{e:'🦁',n:'金狮',b:[1900,1500,4600,1200,1500]},{e:'🐉',n:'烈焰龙',b:[1800,1300,4200,2000,1600]}];
+const ELS=['金','木','水','火','土'],ELC=['🟡','🟢','🔵','🔴','🟤'],BEAT=[1,4,3,0,2],ELM=(x,y)=>BEAT[x]==y?1.3:BEAT[y]==x?.75:1;
+const MAPS=['大唐境外','东海湾','江南野外','女儿村','长寿郊外','花果山'],MON=[['👺','强盗'],['🐗','野猪'],['💀','骷髅怪'],['🦇','蝙蝠'],['🐍','毒蛇']],BOSS=['九头虫','牛魔王','白骨精'];
+const SK={连击:'普攻有40%概率追加一次60%伤害',必杀:'普攻有25%概率造成2倍伤害',吸血:'普通攻击实际伤害的30%回复气血',反震:'受到物理伤害时反弹25%实际伤害，反弹不会再次触发反震',神佑:'每场首次受到致命伤时有30%概率复活，恢复40%气血；不屈优先触发',再生:'每回合开始时恢复5%气血，倒下后不生效',烈火:'8魔法：火系单体法术，基础伤害为法攻×1.8，再计算防御与五行',地狱烈火:'12魔法：火系群体法术，每个敌人的基础伤害为法攻×0.85',治疗:'10魔法：恢复一名存活队友的气血，治疗量为法攻×1.1＋目标气血上限的10%',定身:'10魔法：普通敌人75%、Boss 45%概率失去下一次行动；可打断已蓄力的群攻。被控后短暂免控',护佑:'8魔法：全队本回合及下回合受到的伤害降低25%，重复施放只刷新持续时间',弱金:'受到金系攻击时额外承受20%伤害',弱木:'受到木系攻击时额外承受20%伤害',弱水:'受到水系攻击时额外承受20%伤害',弱火:'受到火系攻击时额外承受20%伤害',弱土:'受到土系攻击时额外承受20%伤害'};
+const CAST={m:{skill:'烈火',cost:8,target:'enemy'},g:{skill:'地狱烈火',cost:12,target:'all'},heal:{skill:'治疗',cost:10,target:'ally'},seal:{skill:'定身',cost:10,target:'enemy'},buff:{skill:'护佑',cost:8,target:'team'}};
+const SPEC_SK=[['烈火','地狱烈火'],['护佑','再生'],['定身','烈火'],['连击','必杀'],['定身','连击'],['再生','护佑'],['治疗','神佑'],['必杀','吸血'],['烈火','地狱烈火']];
+const maxMana=p=>Math.round(24+p.lv*.6+p.at[1]*1.5);
+const fighter=p=>{const a=stats(p),mm=maxMana(p);return{p,a,hp:a.hp,mx:a.hp,mp:mm,mm,cmd:null,tg:0,df:0,guardUntil:0}};
+const intent=f=>!f.boss?'':f.stun?'被定身：下次行动跳过':f.phase=='burst'?'⚠️ 下回合：蓄力群攻':f.phase=='charge'?'下回合：蓄力（不攻击）':'下回合：'+((f.sk||[]).includes('治疗')&&f.hp<f.mx*.5?'自我治疗':'普通攻击');
+const MEDICINE={h:'red',u:'blue'};
+const targetSide=c=>c=='a'?'enemy':MEDICINE[c]?'ally':CAST[c]?.target;
+const ITEMS={red:{n:'红药',e:'🔴',price:10,currency:'coins',desc:'战斗中恢复一名存活队友40%气血，占用一次行动。'},blue:{n:'蓝药',e:'🔵',price:15,currency:'coins',desc:'战斗中恢复一名存活队友40%魔法，占用一次行动。'},exp:{n:'经验丹',e:'✨',price:100,currency:'coins',desc:'让选中的宠物升1级，满级宠物不能使用。'},life:{n:'长寿丹',e:'🌿',price:20,currency:'gems',desc:'为选中的宠物增加100寿命。'}};
+const LOOT=[{id:'red',n:'红药',e:'🔴',rate:[.25,.5],qty:[1,2]},{id:'blue',n:'蓝药',e:'🔵',rate:[.2,.4],qty:[1,2]},{id:'exp',n:'经验丹',e:'✨',rate:[.01,.04],qty:[1,1]},{id:'life',n:'长寿丹',e:'🌿',rate:[.003,.01],qty:[1,1]},{id:'shard',n:'进化石碎片',e:'🧩',rate:[.05,.2],qty:[1,2]},{id:'stone',n:'进化石',e:'🪨',rate:[.002,.03],qty:[1,1]}];
+const BADSK=ELS.map(e=>'弱'+e),OLD_BADSK=['虚弱','迟钝','薄甲'],WEAK_SP=[0,1,5,8],weakFor=el=>'弱'+ELS[BEAT.indexOf(el)],SKN=Object.keys(SK).filter(k=>!BADSK.includes(k)),AN=['攻击','防御','体力','法力','速度'],TN=['体质','魔力','力量','耐力','敏捷'],QN=['野生','宝宝','变异'];
+const BOOK_RATE=[.02,.12],BOSS_BOOKS=['神佑','地狱烈火'];
+const REGION_BOOKS=[['连击','必杀','反震'],['再生','治疗','护佑'],['烈火','吸血','再生'],['定身','治疗','护佑'],['必杀','反震','神佑'],['烈火','地狱烈火','神佑']];
+const ELEMENT_BOOKS=[['连击','必杀','反震'],['治疗','再生','定身'],['治疗','护佑','神佑'],['烈火','地狱烈火','吸血'],['反震','护佑','神佑']];
+const ZONES=[
+ {n:'🌲 森林',lo:1,hi:15,sp:[2,4,5],el:[1,2],sk:['再生','治疗','定身','神佑'],baby:.12,mut:.02,cost:50,gem:10,need:1,rs:6,rare:.03,tag:'治疗与控制 · 灵鹿擅长治疗'},
+ {n:'⛰️ 山地',lo:10,hi:30,sp:[3,1],el:[0,4],sk:['必杀','连击','反震','护佑'],baby:.08,mut:.012,cost:80,gem:12,need:4,rs:7,rare:.025,tag:'物理与防护 · 大海龟擅长护佑'},
+ {n:'🌋 火山',lo:25,hi:50,sp:[0,3],el:[3,3,4],sk:['烈火','地狱烈火','必杀','连击'],baby:.05,mut:.008,cost:130,gem:15,need:8,rs:8,rare:.02,tag:'法术爆发 · 蛟龙与烈焰龙擅长火法'}];
+const TABS=[['pets','🐾 宠物'],['fight','⚔️ 战斗'],['catch','🌿 捕捉'],['fuse','🔮 炼化'],['idle','⏳ 挂机'],['bag','🎒 背包'],['quest','📋 任务'],['dex','📖 图鉴'],['shop','🛒 商店']];
+const R=(a,b)=>a+Math.random()*(b-a),RI=(a,b)=>Math.floor(R(a,b+1)),pick=a=>a[RI(0,a.length-1)],$=id=>document.getElementById(id);
+let S={coins:500,gems:30,last:0,off:null,team:[],dex:{},xps:[null,null,null],xsel:{car:0,z:0,d:0,ids:[]},xlogs:[[],[],[]],stone:0,shard:0,rep:'',dxc:[],badges:[],ng:0,floor:1,tower:0,hunt:{d:'',clears:0},farmOn:false,farmHold:false,mode:'main',dq:null,ac:[],cnt:{win:0,fuse:0,cap:0},bag:null,autoPotion:false,pets:[],active:0,nid:1,stage:1,maxStage:1,tab:'pets',sel:0,zone:0,mg:[],day:''};
+let B={run:0},LOGL=[],LAST=null,REL=0,AUTO_TIMER=null,FARM_TIMER=null;
+const POINT_DRAFT=new Map();
+const pointDraft=p=>POINT_DRAFT.get(p.id)||[0,0,0,0,0];
+const APT_BANDS=[[.82,.95],[.96,1.06],[1.16,1.28]],EV_AP=[1.12,1.1];
+let APT_INFO=null;
+let OFF_AD=false;
+function mk(sp,lv,q,z){
+  const [lo,hi]=APT_BANDS[q],[gl,gh]=[[.85,1],[1,1.15],[1.25,1.4]][q];
+  const sk=[],n=q==0?RI(0,1):q==1?2:3;
+  const pool=[...new Set([...SPEC_SK[sp],...(z?z.sk:SKN)])];if(q>0)sk.push(SPEC_SK[sp][0]);while(sk.length<Math.min(n,pool.length)){const k=pick(pool);if(!sk.includes(k))sk.push(k)}
+  const el=z?pick(z.el):RI(0,4);
+  if(WEAK_SP.includes(sp)&&Math.random()<[.4,.2,.05][q])sk.push(weakFor(el));
+  return{id:S.nid++,sp,n:(q==2?'变异':'')+SP[sp].n,lv,exp:0,ap:SP[sp].b.map(v=>Math.round(v*R(lo,hi))),g:+R(gl,gh).toFixed(3),at:[10,10,10,10,10],fp:5*lv,sk,loy:100,q,el,xl:[0,0,0],nd:[],life:100,ev:0,nat:RI(0,5),ab:RI(0,5)};
+}
+const get=id=>S.pets.find(p=>p.id===id);
+const slots=p=>(p.q==2?5:p.q?4:3)+(p.ev||0);
+function stats0(p){
+  const m=p.loy<60?.85:1,[c,g,s,e,a]=p.at,ap=p.ap,L=p.lv,G=p.g;
+  return{hp:Math.round(30+(L*ap[2]/1000+c*G*ap[2]/1500)*m),mag:Math.round((10+L*ap[3]/1000+g*G*ap[3]/1500)*m),atk:Math.round((20+L*ap[0]/1000+s*G*(ap[0]+1640)/3750)*m),def:Math.round((5+L*ap[1]/1500+e*G*ap[1]/1500)*m),spd:Math.round((5+L*ap[4]/1000+a*G*ap[4]/1200)*m)};
+}
+const REG=[{n:'大唐境外',g:'强盗王',el:4,e:'🤠'},{n:'东海湾',g:'龙太子',el:2,e:'🐲'},{n:'江南野外',g:'白骨精',el:1,e:'💀'},{n:'女儿村',g:'蜘蛛精',el:0,e:'🕷️'},{n:'长寿郊外',g:'牛魔王',el:3,e:'👹'},{n:'花果山',g:'齐天大圣',el:3,e:'🐵'}];
+const NAT=[['勇敢','atk','spd','攻击+10% 速度-10%'],['沉稳','def','atk','防御+10% 攻击-10%'],['活泼','spd','def','速度+10% 防御-10%'],['聪慧','mag','hp','法攻+10% 气血-10%'],['坚韧','hp','mag','气血+10% 法攻-10%'],['平和',null,null,'无加成']];
+const AB=[['先手','每回合最先行动'],['逆境','气血低于40%时伤害+30%'],['不屈','每场战斗一次，受致命伤时保留1点气血'],['厚皮','受到伤害-12%'],['破甲','大幅削弱敌人防御'],['激励','在场时全队伤害+8%']];
+const EVN=[['应龙','龙神'],['玄龟','玄武'],['灵狸','神狸'],['猛虎','白虎'],['金燕','凤凰'],['灵蛙','蛙王'],['仙鹿','神鹿'],['狮王','战神狮'],['炎龙','焚天龙']];
+const DEXM=[[10,'🪙300'],[20,'💎10'],[30,'进化石x3'],[40,'💎30']];
+const emo=p=>SP[p.sp].e+(p.ev>1?'✨':'');
+function dx(p){const d=S.dex[p.sp]||(S.dex[p.sp]={e:0,b:0,m:0});d.e=Math.max(d.e,p.ev||0);if(p.q==1)d.b=1;if(p.q==2)d.m=1}
+function dexScore(){let n=0;for(const k in S.dex){const d=S.dex[k];n+=1+d.b+d.m+(d.e>=1?1:0)+(d.e>=2?1:0)}return n}
+function stats(p){const r=stats0(p),bd=.02*(S.badges.length+6*S.ng),b=1+.01*Math.floor(dexScore()/5)+bd,n=NAT[p.nat||5];r.hp=Math.round(r.hp*b);r.atk=Math.round(r.atk*b);r.def=Math.round(r.def*(1+bd));if(n[1])r[n[1]]=Math.round(r[n[1]]*1.1);if(n[2])r[n[2]]=Math.round(r[n[2]]*.9);return r}
+const evoReq=p=>p.ev>=2?null:p.ev==0?{lv:30,c:500,st:1}:{lv:50,c:1500,st:2};
+function evoHtml(p){
+  const r=evoReq(p);
+  if(!r)return'<div class="sub" style="margin-top:8px">⭐ 已进化至最终形态</div>';
+  return`<div class="sub" style="margin:8px 0 4px">进化 → ${EVN[p.sp][p.ev]}：需 Lv${r.lv}、忠诚≥80、${r.c}🪙、进化石x${r.st}（持有 ${S.stone}）。进化后资质提升、+1技能栏、+10点数。BOSS必掉进化石。</div><div class="row"><button class="b alt" data-a="evo">${p.lv>=r.lv?'进化':'未达条件'}</button></div>`;
+}
+function dexView(){
+  const sc=dexScore();
+  return`<div class="card"><h3>图鉴 ${sc}/${SP.length*5}</h3><div class="sub">每满5分，全队气血与攻击永久+1%（当前+${Math.floor(sc/5)}%）。每种宠物可得分：收集、宝宝、变异、一阶进化、二阶进化。</div>
+  <div class="row" style="margin-top:8px">${DEXM.map(m=>S.dxc.includes(m[0])?`<span class="tag">${m[0]}分 已领</span>`:`<button class="b ${sc>=m[0]?'':'alt'}" data-a="dxc" data-v="${m[0]}">${m[0]}分：${m[1]}</button>`).join('')}</div></div>
+  <div class="card"><div class="team">${SP.map((q,i)=>{const d=S.dex[i];return d?`<div class="fc"><b>${q.e}</b>${q.n}<br><span class="sub">宝宝${d.b?'✓':'·'} 变异${d.m?'✓':'·'} 进化${d.e}/2</span></div>`:`<div class="fc"><b>❔</b>？？？<br><span class="sub">${i>5?ZONES[i-6].n+' 稀有':'未发现'}</span></div>`}).join('')}</div></div>`;
+}
+const FSK=['必杀','吸血','反震','群攻','眩晕','治疗'],GSK=[['必杀','狂暴'],['群攻','治疗'],['吸血','眩晕'],['眩晕','群攻'],['狂暴','必杀','吸血'],['群攻','必杀','治疗','狂暴']];
+const WR=[['🔥 烈火周','敌人全为火属性，攻击+15%'],['🚫 禁药周','塔内不能使用药品'],['⚡ 疾风周','敌人速度翻倍'],['🛡 坚甲周','敌人防御+40%'],['💀 狂暴周','敌人气血+30%，攻击+20%']],wrule=()=>Math.floor(Date.now()/6048e5)%5;
+const DQ=[['打赢3场战斗','win',3,'🪙300',()=>S.coins+=300],['捕捉2只宠物','cap',2,'💎5',()=>S.gems+=5],['收取1次派遣','job',1,'🪙150',()=>S.coins+=150],['炼化1次','fuse',1,'进化石x1',()=>S.stone++],['通过无尽塔1层','twr',1,'💎8',()=>S.gems+=8]];
+const ACH=[['初战告捷','赢得1场战斗',()=>S.cnt.win>=1,5],['百战勇士','赢得100场战斗',()=>S.cnt.win>=100,30],['炼妖师','炼化10次',()=>S.cnt.fuse>=10,20],['捕宠达人','捕捉50只宠物',()=>S.cnt.cap>=50,25],['图鉴收藏家','图鉴达到20分',()=>dexScore()>=20,20],['图鉴大师','图鉴达到40分',()=>dexScore()>=40,50],['变异猎手','收集3种变异宠物',()=>Object.values(S.dex).filter(d=>d.m).length>=3,30],['终极进化','拥有二阶进化宠物',()=>Object.values(S.dex).some(d=>d.e>=2),30],['馆主终结者','集齐6枚徽章',()=>S.badges.length+6*S.ng>=6,20],['登塔者','无尽塔达到10层',()=>S.tower>=10,20],['塔顶之上','无尽塔达到30层',()=>S.tower>=30,60],['噩梦降临','开启第2周目',()=>S.ng>=1,40]];
+const DUR=[2,6,12],XREQ=[80,200,380],PET_CAP=15;
+const badgeTotal=()=>S.badges.length+6*S.ng;
+const carCap=()=>Math.min(3,1+Math.floor(badgeTotal()/2));
+const isExploring=id=>S.xps.some(x=>x&&x.ids.includes(id));
+const isGatherer=p=>[1,2,6].includes(p.sp);
+const gatherBonus=ps=>Math.min(1,ps.reduce((n,p)=>n+(isGatherer(p)?p.q==2?.4:.25:0),0));
+
+function xpow(ids,z){
+  const ps=ids.map(get).filter(Boolean);if(!ps.length)return 0;
+  const avg=ps.reduce((a,p)=>{const t=stats(p);return a+t.atk+t.def+t.hp/4},0)/ps.length,el=ps.some(p=>BEAT[p.el]===ZONES[z].el[0])?1.1:1;
+  return avg*el/XREQ[z]*(1+.15*(ps.length-1));
+}
+function xegg(z,q){
+  if(S.pets.length>=PET_CAP){S.gems+=3;return'🥚 带回了野生宠物蛋，但宠物栏已满，改送💎3'}
+  const rr=Math.random()<.15,p=mk(rr?z.rs:pick(z.sp),RI(z.lo,Math.round((z.lo+z.hi)/2)),rr?Math.max(q,1):(Math.random()<z.baby*3?1:0),z);
+  addPet(p);return'🥚 带回了'+(rr?'稀有宠物 ':'野生宠物 ')+p.n+' (Lv'+p.lv+')!';
+}
+function xcollect(car){
+  const x=S.xps[car];if(!x)return;
+  const z=ZONES[x.z],ps=x.ids.map(get).filter(Boolean),r=xpow(x.ids,x.z),pr=Math.min(.95,.3+.45*r),mine=1+gatherBonus(ps);
+  const el=Math.min(Date.now()-x.t,x.h*36e5)/36e5,n=Math.floor(el/2),full=el>=x.h-.001,lg=[],lv=ps.length?Math.round(ps.reduce((a,p)=>a+p.lv,0)/ps.length):1;
+  let c=0,pt=0,mt=0,sh=0,gm=0,ex=0,fail=0;
+  for(let i=0;i<n;i++){
+    if(Math.random()>pr){fail++;lg.push('⚠️ 遭遇强敌，队伍撤退（本次无收获）');continue}
+    const k=RI(0,5);
+    if(k==0){const v=2+x.z,b=1+Math.floor(x.z/2);pt+=v;mt+=b;lg.push('🌿 发现草药，红药+'+v+'、蓝药+'+b)}
+    else if(k==1){const base=Math.round((60+x.z*100)*R(.8,1.3)),v=Math.round(base*mine);c+=v;lg.push('⛏ 采集矿石，金币+'+v+(mine>1?'（采集加成+'+Math.round((mine-1)*100)+'%）':''))}
+    else if(k==2){const v=lv*6+10;ex+=v;lg.push('⚔️ 击退野兽，全队经验+'+v)}
+    else if(k==3){gm+=2;lg.push('🎁 发现宝箱，💎+2')}
+    else if(k==4){sh++;lg.push('🗿 遗迹残片，进化石碎片+1')}
+    else{const p=pick(ps),sk=p&&p.sk.length<slots(p)?pick(z.sk.filter(q=>!p.sk.includes(q))):null;if(sk){p.sk.push(sk);lg.push('📜 石碑启示：'+p.n+'领悟了「'+sk+'」!')}else{c+=100;lg.push('📜 发现古卷，金币+100')}}
+  }
+  if(n>=1&&Math.random()<Math.min(.6,.1*n*Math.min(1,r)))lg.push(xegg(z,0));
+  if(full&&x.h>=12){
+    if(Math.random()<Math.min(.9,.15+.5*r)){c+=400*(x.z+1);gm+=10;S.stone++;lg.push('👑 击败区域首领！金币+'+400*(x.z+1)+'、💎10、进化石+1');if(Math.random()<.25)lg.push(xegg(z,1))}
+    else{ps.forEach(p=>p.loy=Math.max(0,p.loy-5));lg.push('💥 首领太强，队伍负伤撤退（忠诚度-5）')}
+  }
+  if(!n&&!full)lg.push('队伍刚出发就被召回，没有收获');
+  S.coins+=c;addItem('red',pt);addItem('blue',mt);S.shard+=sh;S.gems+=gm;
+  while(S.shard>=5){S.shard-=5;S.stone++;lg.push('合成了1个进化石')}
+  ps.forEach(p=>{gain(p,ex);p.loy=Math.max(0,p.loy-2*fail)});
+  S.xlogs[car]=lg;S.xps[car]=null;
+}
+function expView(){
+  const unlocked=carCap(),sel=S.xsel;
+  if(sel.car>=unlocked)sel.car=0;
+  const car=sel.car,x=S.xps[car],log=S.xlogs[car]||[],L=log.length?`<div class="sub" style="margin-top:8px;line-height:1.7">上次探险日志：<br>${log.join('<br>')}</div>`:'';
+  const nav=`<div class="card"><h3>🚗 探险车队 ${unlocked}/3</h3><div class="sub">初始1辆；累计获得2枚、4枚徽章时各解锁1辆，周目重开后保留。每辆车可独立探险。</div><div class="row" style="margin-top:8px">${[0,1,2].map(i=>`<button class="b ${i===car?'':'alt'}" data-a="xcar" data-v="${i}">${i<unlocked?'第'+(i+1)+'辆'+(S.xps[i]?' ⏳':''):'🔒 '+(i*2)+'徽章'}</button>`).join('')}</div></div>`;
+  if(x){
+    const z=ZONES[x.z],rem=Math.max(0,x.t+x.h*36e5-Date.now()),done=rem<=0,hh=Math.floor(rem/36e5),mm=Math.floor(rem%36e5/6e4),bonus=Math.round(gatherBonus(x.ids.map(get).filter(Boolean))*100);
+    return nav+`<div class="card"><h3>🚗 第${car+1}辆探险车</h3><div>${z.n} · ${x.h}小时 · 队员 ${x.ids.map(get).filter(Boolean).map(emo).join(' ')}</div><div class="sub" style="margin:6px 0">${done?'探险车已返回！':'剩余 '+hh+'小时'+mm+'分钟 · 每2小时一次事件'+(x.h>=12?'，最后有区域首领':'')}<br>采矿收益加成 +${bonus}%</div><button class="b ${done?'':'alt'}" data-a="xc" data-v="${car}">${done?'收取成果':'提前召回（只结算已完成的事件）'}</button>${L}</div>`;
+  }
+  const z=ZONES[sel.z],pr=xpow(sel.ids,sel.z),avail=S.pets.filter(p=>!S.team.includes(p.id)&&!p.job&&!isExploring(p.id)),ce=BEAT.indexOf(z.el[0]),bonus=Math.round(gatherBonus(sel.ids.map(get).filter(Boolean))*100);
+  return nav+`<div class="card"><h3>🚗 第${car+1}辆探险车</h3><div class="sub" style="margin-bottom:6px">派不上阵的宠物外出探险，时间到了自动完成多次事件。⛏ 采集型宠物（大海龟、狸、灵鹿）可增加采矿金币，变异采集型加成更高。</div>
+  <div class="row">${ZONES.map((q,i)=>`<button class="b ${sel.z===i?'':'alt'}" data-a="xz" data-v="${i}">${q.n}${!S.ng&&S.maxStage<q.need?' 🔒':''}</button>`).join('')}</div>
+  <div class="row" style="margin:6px 0">${DUR.map((d,i)=>`<button class="b ${sel.d===i?'':'alt'}" data-a="xd" data-v="${i}">${d}小时</button>`).join('')}</div>
+  <div class="sub">选择队员（最多3只；不能同时参战、派遣或乘坐其他探险车）：</div>
+  <div class="row">${avail.map(p=>`<button class="pc ${sel.ids.includes(p.id)?'sel':''}" data-a="xp" data-v="${p.id}"><b>${emo(p)}</b>${p.n}<br>Lv${p.lv}${isGatherer(p)?' ⛏':''}</button>`).join('')||'<span class="sub">没有可用的宠物（把上阵宠物下阵，或多抓几只）</span>'}</div>
+  <div class="sub" style="margin:6px 0">预计事件成功率：${sel.ids.length?Math.round(Math.min(.95,.3+.45*pr)*100)+'%':'—'} · 采矿金币加成 +${bonus}%（带 ${ELC[ce]}${ELS[ce]}系宠物克制本区域，更稳）</div>
+  <button class="b" data-a="xs">出发</button>${L}</div>`;
+}
+const capH=()=>8+S.badges.length+2*S.ng;
+const towerOpen=()=>S.maxStage>=31||S.ng>0;
+function dqRoll(){const d=new Date().toDateString();if(!S.dq||S.dq.d!==d)S.dq={d,p:{},c:[]}}
+function qp(k){dqRoll();S.dq.p[k]=(S.dq.p[k]||0)+1;if(S.cnt[k]!==undefined)S.cnt[k]++}
+function claimable(){dqRoll();return DQ.some((d,i)=>(S.dq.p[d[1]]||0)>=d[2]&&!S.dq.c.includes(i))||ACH.some((a,i)=>a[2]()&&!S.ac.includes(i))}
+function questView(){
+  dqRoll();const q=S.dq;
+  return`<div class="card"><h3>每日任务</h3>${DQ.map((d,i)=>{const p=Math.min(d[2],q.p[d[1]]||0),ok=p>=d[2];return`<div class="at"><span>${d[0]} <span class="sub">${p}/${d[2]} · ${d[3]}</span></span>${q.c.includes(i)?'<span class="tag">已领</span>':`<button class="b ${ok?'':'alt'}" data-a="dq" data-v="${i}">领取</button>`}</div>`}).join('')}</div>
+  <div class="card"><h3>成就</h3>${ACH.map((a,i)=>{const ok=a[2]();return`<div class="at"><span>${a[0]} <span class="sub">${a[1]} · 💎${a[3]}</span></span>${S.ac.includes(i)?'<span class="tag">已领</span>':`<button class="b ${ok?'':'alt'}" data-a="ac" data-v="${i}">${ok?'领取':'未达成'}</button>`}</div>`}).join('')}</div>`;
+}
+const HUNT_TRAITS=[['疾风','敌人速度+30%'],['坚甲','敌人防御+30%'],['狂怒','敌人攻击+20%'],['顽强','敌人气血+25%'],['疗愈','头目会治疗']];
+function huntRoll(){const d=new Date().toDateString();if(!S.hunt||S.hunt.d!==d)S.hunt={d,clears:0}}
+function huntInfo(){huntRoll();const seed=[...S.hunt.d].reduce((n,c)=>n+c.charCodeAt(0),0),i=S.hunt.clears;return{el:(seed+i*2)%5,trait:(seed+i*3)%HUNT_TRAITS.length,st:Math.max(1,Math.min(30,S.maxStage-1)),i}}
+function huntReward(st){return Math.round((120+st*25)*(1+.5*S.ng))}
+function modeBar(){huntRoll();return`<div class="row" style="margin-bottom:8px"><button class="b ${S.mode=='main'?'':'alt'}" data-a="mode" data-v="main">🗺 主线</button><button class="b ${S.mode=='tower'?'':'alt'}" data-a="mode" data-v="tower">🗼 无尽塔${towerOpen()?'':' 🔒'}</button><button class="b ${S.mode=='hunt'?'':'alt'}" data-a="mode" data-v="hunt">🎯 悬赏 ${S.hunt.clears}/3</button></div>`}
+function towerCard(){const w=WR[wrule()];return`<div class="card"><div class="row" style="justify-content:space-between"><button class="b alt" data-a="st" data-v="-1">◀</button><b>🗼 无尽塔 第 ${S.floor} 层${S.floor%10==0?' · 塔主':''}</b><button class="b alt" data-a="st" data-v="1">▶</button></div><div class="sub" style="text-align:center;margin-top:6px">最高纪录 ${S.tower} 层 · 每10层塔主必掉进化石<br>本周规则：${w[0]} ${w[1]}</div></div>`}
+function huntCard(){const h=huntInfo();return`<div class="card"><h3>🎯 每日悬赏 ${Math.min(3,h.i+1)}/3</h3><div class="sub">${h.i>=3?'今日3场已完成，明天刷新目标。':`本场敌人以 ${ELC[h.el]}${ELS[h.el]}系为主，推荐带 ${ELC[BEAT.indexOf(h.el)]}${ELS[BEAT.indexOf(h.el)]}系宠物。特殊规则：${HUNT_TRAITS[h.trait][0]}（${HUNT_TRAITS[h.trait][1]}）。第三场有悬赏头目。胜利奖励：🪙${huntReward(h.st)}、💎2、进化石碎片1。`}<br>每天三场，次日更换目标；失败可再次挑战。</div></div>`}
+function tfoes(f){
+  const lv=26+f*2,b=f%10==0,H=40+lv*8,A=10+lv*2,D=3+lv*1.2,w=wrule();
+  return[0,1,2].map(i=>{
+    const bb=b&&i==1,mo=MON[(f+i)%5],n=bb?0:b?1:(f>=30?3:2);
+    const x={lv,b,n:bb?'塔主':mo[1],e:bb?'👑':mo[0],el:(f+i*2)%5,hp:Math.round(H*(b?(bb?1.8:.5):.9)),atk:Math.round(A*(b?(bb?1.4:.7):.9)),def:Math.round(D*(bb?1.3:b?.6:1)),spd:Math.round(5+lv*1.5),ri:0,map:'无尽塔'};
+    x.mx=x.hp;x.boss=bb;x.phase='strike';x.sk=bb?['群攻','狂暴','治疗']:Array.from({length:n},(_,j)=>FSK[(f*3+i*2+j*5)%6]);
+    if(w==0){x.el=3;x.atk=Math.round(x.atk*1.15)}if(w==2)x.spd*=2;if(w==3)x.def=Math.round(x.def*1.4);if(w==4){x.hp=x.mx=Math.round(x.hp*1.3);x.atk=Math.round(x.atk*1.2)}
+    return x});
+}
+function hfoes(){const h=huntInfo(),fs=foes(h.st);return fs.map((f,i)=>{f.n='悬赏·'+f.n;f.el=h.el;f.hp=f.mx=Math.round(f.hp*(1.1+.08*h.i));f.atk=Math.round(f.atk*(1.05+.06*h.i));if(h.i>0)f.sk=[...new Set([...f.sk,FSK[(h.el+i+h.i)%FSK.length]])];if(h.trait==0)f.spd=Math.round(f.spd*1.3);if(h.trait==1)f.def=Math.round(f.def*1.3);if(h.trait==2)f.atk=Math.round(f.atk*1.2);if(h.trait==3)f.hp=f.mx=Math.round(f.hp*1.25);if(h.trait==4&&i==1)f.sk=[...new Set([...f.sk,'治疗'])];if(h.i==2&&i==1){f.boss=true;f.phase='strike';f.n='悬赏头目';f.e='👹';f.hp=f.mx=Math.round(f.hp*1.4);f.atk=Math.round(f.atk*1.15);f.sk=[...new Set([...f.sk,'群攻'])]}return f})}
+function curFoes(){return S.mode=='tower'?tfoes(S.floor):S.mode=='hunt'?hfoes():foes(S.stage)}
+function lootContext(foes=B.F){const mode=B.run?(B.tw?'tower':B.hunt?'hunt':'main'):S.mode;return{mode,region:Math.floor((S.stage-1)/5)%6,el:foes[1].el,boss:foes.some(f=>f.boss),where:mode=='tower'?'无尽塔第'+S.floor+'层':mode=='hunt'?'悬赏第'+(S.hunt.clears+1)+'场':'主线第'+S.stage+'关'}}
+function bookPool(context){const pool=context.mode=='tower'?SKN:context.mode=='hunt'?ELEMENT_BOOKS[context.el]||REGION_BOOKS[0]:REGION_BOOKS[context.region||0];return pool.filter(k=>context.boss||!BOSS_BOOKS.includes(k))}
+function lootItemText(x){if(x.id=='book')return'📚《'+x.skill+'》技能书 ×'+x.qty;const d=LOOT.find(d=>d.id==x.id);return d?d.e+d.n+' ×'+x.qty:''}
+function grantBattleLoot(context){
+  const tier=context.boss?1:0,items=[];
+  for(const item of LOOT){
+    if(Math.random()>=item.rate[tier])continue;
+    const qty=item.qty[tier];
+    if(item.id=='stone'||item.id=='shard')S[item.id]+=qty;else addItem(item.id,qty);
+    items.push({id:item.id,qty});
+  }
+  const pool=bookPool(context);
+  if(pool.length&&Math.random()<BOOK_RATE[tier]){const skill=pick(pool);S.bag.books[skill]=bookCount(skill)+1;items.push({id:'book',skill,qty:1})}
+  if(!items.length){LOGL.push('🎒 本场未掉落额外道具');return}
+  const names=items.map(lootItemText);
+  LOGL.push('🎁 战利品已入背包：'+names.join('、'));
+  let crafted=0;while(S.shard>=5){S.shard-=5;S.stone++;crafted++}
+  if(crafted)LOGL.push('🧩 碎片自动合成进化石 ×'+crafted);
+  S.lootLog.unshift({where:context.where,boss:context.boss,items,crafted,time:Date.now()});S.lootLog=S.lootLog.slice(0,6);
+}
+function lootOdds(foes){
+  const tier=foes.some(f=>f.boss)?1:0,pool=bookPool(lootContext(foes));
+  return`<details class="sub battle-help"><summary>🎁 查看${tier?'Boss':'普通战斗'}掉落概率</summary><div>胜利后每种道具独立判定一次，可能掉多种，也可能没有；参战数量不影响掉落。连续自动战斗也会收取。</div>${LOOT.map(d=>`<div>${d.e} ${d.n} ×${d.qty[tier]} · ${+(d.rate[tier]*100).toFixed(1)}%</div>`).join('')}<div>📚 技能书 ×1 · ${BOOK_RATE[tier]*100}%<br>本场书种：${pool.join('、')}（掉书后等概率抽取一本）。</div><div>本表是额外随机掉落，关卡固定奖励会另外结算。</div></details>`;
+}
+function lootHistory(){
+  return`<div class="card"><h3>🎁 最近掉落</h3><div class="sub">保留最近6次有掉落的战斗，自动挂机的收获也会记录。</div>${S.lootLog.length?S.lootLog.map(entry=>`<div class="sub" style="margin-top:10px;line-height:1.7"><b>${entry.where}${entry.boss?' · Boss':''}</b> · ${new Date(entry.time).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})}<br>${entry.items.map(lootItemText).join('、')}${entry.crafted?'<br>碎片合成进化石 ×'+entry.crafted:''}</div>`).join(''):'<div class="sub" style="margin-top:8px">还没有掉落记录，赢得战斗后有机会获得道具。</div>'}</div>`;
+}
+const battleExpPool=(foes,mode=S.mode)=>mode=='hunt'?(2+huntInfo().st*3)*8:foes[1].lv*8*(foes[1].b?2:1);
+function rewardBattleExp(total){
+  const pets=B.T.map(t=>t.p),n=pets.length;if(!n)return'无参战宠物';
+  const each=Math.floor(total/n),remainder=total%n;let up=0;
+  const shares=pets.map((p,i)=>{const amount=each+(i<remainder?1:0);up+=gain(p,amount);return p.n+' +'+amount});
+  return'战斗总经验 '+total+'，'+n+'只参战平分：'+shares.join('、')+(up?'（共升级'+up+'次）':'');
+}
+function twin(){
+  const e=B.F[1],c=e.lv*14*(e.b?3:1),ex=battleExpPool(B.F,'tower');
+  S.coins+=c;const xp=rewardBattleExp(ex);LOGL.push('🎉 通过第'+S.floor+'层! +'+c+'🪙，'+xp);
+  if(S.floor>S.tower){S.tower=S.floor;const g=e.b?10:2;S.gems+=g;LOGL.push('🏆 新纪录! 💎+'+g)}
+  if(e.b){S.stone++;LOGL.push('获得 进化石 x1')}
+  qp('twr');S.floor++;
+}
+function hwin(){const h=huntInfo(),c=huntReward(h.st),ex=battleExpPool(B.F,'hunt');S.coins+=c;S.gems+=2;S.shard++;const xp=rewardBattleExp(ex);LOGL.push('🎯 悬赏完成! +'+c+'🪙、💎2、碎片1，'+xp);while(S.shard>=5){S.shard-=5;S.stone++;LOGL.push('合成了1个进化石')}S.hunt.clears++;B.F=null;B.T=null}
+function enemy(st){const lv=2+st*3,b=st%5==0,k=b?1.6:1,m=MON[st%5],ri=Math.floor((st-1)/5)%6;return{lv,b,hp:Math.round((40+lv*8)*k),atk:Math.round((10+lv*2)*(b?1.3:1)),def:Math.round((3+lv*1.2)*(b?1.3:1)),spd:Math.round(5+lv*1.5),n:b?REG[ri].g:m[1],e:b?REG[ri].e:m[0],el:REG[ri].el,map:REG[ri].n,ri}}
+function gain(p,exp){
+  p.exp+=exp;let up=0;
+  while(p.lv<60&&p.exp>=Math.round(p.lv*p.lv*1.65)){p.exp-=Math.round(p.lv*p.lv*1.65);p.lv++;p.fp+=5;up++}
+  return up;
+}
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.remove('show'),1600)}
+function save(){try{localStorage.setItem('petsaga2',JSON.stringify(S))}catch(e){}}
+function load(){try{const r=localStorage.getItem('petsaga2');if(r)S=Object.assign(S,JSON.parse(r))}catch(e){}}
+const normalizePotionThreshold=v=>v==null||!Number.isFinite(Number(v))?20:Math.min(95,Math.max(0,Math.round(Number(v)/5)*5));
+function initBag(){
+  const valid=S.bag&&typeof S.bag=='object'&&!Array.isArray(S.bag);
+  if(!valid)S.bag={red:S.pot===undefined?3:S.pot,blue:3,exp:0,life:0};
+  for(const key of Object.keys(ITEMS)){const n=Number(S.bag[key]);S.bag[key]=Number.isFinite(n)?Math.max(0,Math.floor(n)):0}
+  const books=S.bag.books&&typeof S.bag.books=='object'&&!Array.isArray(S.bag.books)?S.bag.books:{};
+  S.bag.books=Object.fromEntries(SKN.map(k=>{const n=Number(books[k]);return[k,Number.isFinite(n)?Math.max(0,Math.floor(n)):0]}));
+  delete S.pot;S.autoPotion=S.autoPotion===true;
+  const rules=S.potionRules||{};S.potionRules={red:normalizePotionThreshold(rules.red),blue:normalizePotionThreshold(rules.blue)};
+  S.lootLog=Array.isArray(S.lootLog)?S.lootLog.slice(0,6):[];
+}
+const itemCount=id=>S.bag?.[id]||0;
+const bookCount=skill=>S.bag.books?.[skill]||0;
+function bookUseView(p,expanded=false){
+  const owned=SKN.filter(k=>bookCount(k)>0);
+  const intro='<div class="sub" style="margin:8px 0;line-height:1.7">使用一本对应技能书学习技能，不额外收费。技能栏已满时会随机覆盖一个已有技能；已学会的技能不会消耗书。</div>';
+  if(!owned.length)return intro+'<div class="sub">暂无技能书。战斗胜利有概率掉落，Boss 的掉率更高。</div>';
+  return intro+`<div class="${expanded?'bag-grid':'row'}">${owned.map(k=>{const disabled=B.run||!p||p.sk.includes(k);const button=`<button class="b alt" data-a="book" data-v="${k}" title="${SK[k]}" ${disabled?'disabled':''}>${expanded?'使用':'📚 '+k+' ×'+bookCount(k)}${p?.sk.includes(k)?'（已学会）':''}</button>`;return expanded?`<div class="bag-item"><h3>📚 ${k}<span>×${bookCount(k)}</span></h3><div class="sub">${SK[k]}</div><div class="row">${button}</div></div>`:button}).join('')}</div>`;
+}
+function bookBagView(p){
+  return`<div class="card"><h3>📚 技能书</h3><div class="sub">使用对象：${p?p.n+' · Lv'+p.lv:'未选择'}（可在上方切换宠物）${B.run?' · 战斗中不能打书':''}</div>${bookUseView(p,true)}<details class="sub battle-help"><summary>去哪刷技能书？</summary><div>普通战斗2%、Boss 12%概率掉一本。标注「Boss」的书仅首领战斗会掉。</div>${REG.map((r,i)=>`<div><b>${r.n}（${i*5+1}–${i*5+5}关）</b>：${REGION_BOOKS[i].map(k=>k+(BOSS_BOOKS.includes(k)?'〔Boss〕':'')).join('、')}</div>`).join('')}<div>无尽塔从通用书池掉落，塔主可掉全部书种；悬赏按本场敌人五行决定书种。战斗页可以查看本场掉落名单。</div></details></div>`;
+}
+function addItem(id,n){if(ITEMS[id]&&Number.isInteger(n)&&n>0)S.bag[id]=itemCount(id)+n}
+function buyItem(id,n){
+  const item=ITEMS[id];if(!item||![1,3].includes(n))return;
+  const cost=item.price*n;if(S[item.currency]<cost)return toast(item.currency=='coins'?'金币不足':'钻石不足');
+  S[item.currency]-=cost;addItem(id,n);toast(item.n+' ×'+n+' 已放入背包');
+}
+function useGrowthItem(id,p){
+  if(!p||!['exp','life'].includes(id))return;
+  if(!itemCount(id))return toast('背包里没有'+ITEMS[id].n);
+  if(id=='exp'&&p.lv>=60)return toast('宠物已满级，不消耗经验丹');
+  S.bag[id]--;if(id=='exp')gain(p,Math.round(p.lv*p.lv*1.65)-p.exp);else p.life+=100;
+  toast(p.n+(id=='exp'?'升了1级':'寿命增加100'));
+}
+const medicineLeft=c=>Math.max(0,itemCount(MEDICINE[c])-(B.run?B.T.filter(t=>t.cmd==c&&t.hp>0).length:0));
+const medicineNeeded=(c,t)=>!!t&&t.hp>0&&(c=='h'?t.hp<t.mx:t.mp<t.mm);
+function potionSettings(){
+  return`<div class="potion-settings"><div class="row" style="justify-content:space-between"><b>自动用药设置</b><button class="b ${S.autoPotion?'':'alt'}" data-a="autopot">${S.autoPotion?'已开启':'已关闭'}</button></div>${['red','blue'].map(id=>{const pct=S.potionRules[id],label=id=='red'?'气血':'魔法';return`<div class="potion-setting"><span>${ITEMS[id].e} ${ITEMS[id].n}：<b>${pct?label+' ≤ '+pct+'%':'停用'}</b></span><div class="row"><button class="b alt" data-a="potrule" data-v="${id},-5" aria-label="降低${ITEMS[id].n}阈值5%" ${pct>0?'':'disabled'}>−5%</button><button class="b alt" data-a="potrule" data-v="${id},5" aria-label="提高${ITEMS[id].n}阈值5%" ${pct<95?'':'disabled'}>+5%</button></div></div>`}).join('')}<div class="sub" style="margin-top:8px;line-height:1.6">${S.autoPotion?'红药优先救急；有主动法术的宠物按魔法百分比用蓝药，遇到Boss蓄力时优先应对。':'当前自动用药关闭，开启后按以上百分比判断。'}<br>范围0–95%，0%停用该药。设置自动保存，下次自动行动生效。喂药占用本回合，不能同时攻击或施法；禁药周不可用药。</div></div>`;
+}
+function bagView(){
+  const pet=get(S.sel),locked=B.run?'disabled':'';
+  return `<div class="card"><h3>🎒 背包</h3><div class="sub">道具自动叠加保存。红蓝药可在战斗中使用；每场开始气血与魔法补满，战斗外无需补药。</div>${potionSettings()}</div>
+  <div class="card"><h3>战斗补给</h3><div class="bag-grid">${['red','blue'].map(id=>{const it=ITEMS[id],c=id=='red'?'h':'u';return`<div class="bag-item"><h3>${it.e} ${it.n}<span>×${itemCount(id)}</span></h3><div class="sub">${it.desc}</div><div class="row"><button class="b" data-a="bagmed" data-v="${c}" ${!B.run||B.auto||!medicineLeft(c)||B.tw&&wrule()==1?'disabled':''}>${B.run?'选择用药目标':'战斗中使用'}</button><button class="b alt" data-a="buyitem" data-v="${id},3" ${locked}>买3瓶 · ${it.price*3}🪙</button></div></div>`}).join('')}</div><div class="sub" style="margin-top:8px">来源：战斗掉落、商店、离线收益、探险采集、宠物派遣。</div></div>
+  <div class="card"><h3>宠物养成道具</h3><div class="sub">使用对象：${pet?pet.n+' · Lv'+pet.lv:'请选择宠物'}${B.run?'（战斗中暂停使用养成道具）':''}</div><div class="row bag-picker">${S.pets.map(p=>`<button class="pc ${p.id===S.sel?'sel':''}" data-a="sel" data-v="${p.id}" ${locked}>${emo(p)} ${p.n}<br>Lv${p.lv}</button>`).join('')}</div><div class="bag-grid" style="margin-top:10px">${['exp','life'].map(id=>{const it=ITEMS[id];return`<div class="bag-item"><h3>${it.e} ${it.n}<span>×${itemCount(id)}</span></h3><div class="sub">${it.desc}</div><div class="row"><button class="b" data-a="useitem" data-v="${id}" ${B.run||!pet||!itemCount(id)||id=='exp'&&pet.lv>=60?'disabled':''}>使用1颗</button><button class="b alt" data-a="buyitem" data-v="${id},1" ${locked}>买1颗 · ${it.price}${it.currency=='coins'?'🪙':'💎'}</button></div></div>`}).join('')}</div></div>
+  ${bookBagView(pet)}
+  <div class="card"><h3>材料</h3><div class="at"><span>🪨 进化石</span><b>×${S.stone}</b></div><div class="sub">用于宠物进化，达到条件后在宠物页使用。</div><div class="at"><span>🧩 进化石碎片</span><b>×${S.shard}</b></div><div class="sub">每集齐5片自动合成1颗进化石。</div></div>${lootHistory()}`;
+}
+function card(p,extra){return`<button class="pc ${p.q==2?'gold':''} ${S.sel===p.id?'sel':''}" data-a="${extra||'sel'}" data-v="${p.id}"><b>${emo(p)}</b>${p.n}<br>Lv${p.lv}${p.ev?' ★'+p.ev:''}${S.team.includes(p.id)?' ⭐':''}${p.job?' ⏳':''}${p.q?' <span class="tag">'+QN[p.q]+'</span>':''}${isGatherer(p)?' ⛏':''}</button>`}
+function aptitudeRange(p,i){
+  const base=SP[p.sp].b[i],band=APT_BANDS[p.q],evolution=EV_AP.slice(0,p.ev||0);
+  const bounds=band.map(mult=>evolution.reduce((v,m)=>Math.round(v*m),Math.round(base*mult)));
+  return{min:bounds[0],max:bounds[1]};
+}
+function aptitudeView(p){
+  const active=APT_INFO?.id===p.id?APT_INFO.index:-1;
+  const rows=p.ap.map((v,i)=>{const r=aptitudeRange(p,i),hint=AN[i]+'资质自然参考范围 '+r.min+'–'+r.max;return`<div class="apt-row"><span>${AN[i]}资质</span><b>${v}</b>${v>=r.max?'<span class="apt-full" title="达到自然参考上限">满</span>':''}<button type="button" class="apt-info" data-a="aptinfo" data-v="${p.id},${i}" title="${hint}" aria-label="查看${AN[i]}资质范围" aria-expanded="${active===i}" ${active===i?`aria-controls="apt-help-${p.id}"`:''}>ⓘ</button></div>`}).join('');
+  let help='';
+  if(active>=0&&active<p.ap.length){
+    const r=aptitudeRange(p,active),v=p.ap[active],form=p.ev?EVN[p.sp][p.ev-1]:SP[p.sp].n;
+    help=`<div class="apt-help sub" id="apt-help-${p.id}" role="note"><b>${AN[active]}资质 · ${QN[p.q]} · ${form}</b><br>自然参考范围：<b>${r.min}–${r.max}</b><br>当前 ${v} · ${v>r.max?'已突破参考上限 '+(v-r.max):v===r.max?'已达到参考上限':'距参考上限还差 '+(r.max-v)}<br>范围随宠物种类、品质和进化形态变化。「满」表示达到自然参考上限，炼化仍可突破。</div>`;
+  }
+  return`<div class="apt-grid">${rows}</div>${help}`;
+}
+function detail(p){
+  const draft=pointDraft(p),pending=draft.reduce((a,b)=>a+b,0),left=p.fp-pending;
+  const s=stats({...p,at:p.at.map((v,i)=>v+draft[i])}),sl=slots(p);
+  return`<div class="card"><h3>${emo(p)} ${p.n} · Lv${p.lv} <span class="tag ${p.q==2?'g':''}">${QN[p.q]}</span></h3>
+  <div class="sub">${isGatherer(p)?`⛏ 采集型：探险采矿金币+${p.q==2?40:25}%<br>`:''}五行 ${ELC[p.el]}${ELS[p.el]} · 经验 ${p.exp}/${Math.round(p.lv*p.lv*1.65)} · 成长率 ${p.g} · 忠诚 ${p.loy} · 寿命 ${p.life}<br>性格 ${NAT[p.nat][0]}（${NAT[p.nat][3]}）· 特性 ${AB[p.ab][0]}：${AB[p.ab][1]}${p.loy<60?' ⚠️属性-15%':''}</div>
+  ${aptitudeView(p)}
+  <div class="grid2" style="margin-bottom:8px"><span>气血 <b>${s.hp}</b></span><span>攻击 <b>${s.atk}</b></span><span>防御 <b>${s.def}</b></span><span>法攻 <b>${s.mag}</b></span><span>速度 <b>${s.spd}</b></span><span>可用点数 <b>${left}</b></span></div>
+  <div class="sub" style="margin-bottom:6px">${pending?'属性预览：已预分配 '+pending+' 点，确认后生效。':'先分配点数，再点击确认；“全部”将剩余点数加到该属性。'}</div>
+  ${p.at.map((v,i)=>`<div class="at"><span>${TN[i]} <b>${v}</b>${draft[i]?` <span style="color:var(--acc)">+${draft[i]}</span>`:''}</span><span><button data-a="pt" data-v="${i},-1" ${draft[i]?'':'disabled'} aria-label="撤回1点${TN[i]}">−1</button> <button data-a="pt" data-v="${i},1" ${left>0?'':'disabled'}>+1</button> <button data-a="pt" data-v="${i},5" ${left>0?'':'disabled'}>+5</button> <button data-a="pt" data-v="${i},all" ${left>0?'':'disabled'}>全部</button></span></div>`).join('')}
+  <div class="row" style="margin-top:8px"><button class="b" data-a="ptconfirm" ${pending?'':'disabled'}>确认加点${pending?'（'+pending+'点）':''}</button><button class="b alt" data-a="ptcancel" ${pending?'':'disabled'}>撤回本次</button></div>
+  <div style="margin-top:8px">技能 (${p.sk.length}/${sl}): ${p.sk.map(k=>`<span class="tag ${BADSK.includes(k)?'bad':'g'}" title="${SK[k]}">${k}</span>`).join('')||'<span class="sub">无</span>'}</div>
+  <details class="sub battle-help"><summary>查看技能效果 · 魔法上限 ${maxMana({...p,at:p.at.map((v,i)=>v+draft[i])})}</summary>${p.sk.map(k=>`<div><b>${k}</b>：${SK[k]||'未知技能'}</div>`).join('')}<div>魔力加点同时提升法攻与魔法上限。每场开始时气血和魔法补满。</div></details>
+  ${p.sk.some(k=>BADSK.includes(k))?`<div class="sub" style="margin-top:6px">红色弱点技能会使对应五行的来袭伤害额外增加20%，并占用技能栏；可花150🪙净化。</div><div class="row">${p.sk.filter(k=>BADSK.includes(k)).map(k=>`<button class="b alt" data-a="purge" data-v="${k}">净化${k} 150🪙</button>`).join('')}</div>`:''}
+  ${bookUseView(p)}
+  ${evoHtml(p)}
+  <div class="row" style="margin-top:8px"><button class="b alt" data-a="useitem" data-v="life" ${itemCount('life')?'':'disabled'}>长寿丹 ×${itemCount('life')} · 寿命+100</button><button class="b alt" data-a="tab" data-v="bag">打开背包</button></div>
+  <div class="row" style="margin-top:10px"><button class="b" data-a="act">${S.team.includes(p.id)?'下阵':'上阵'}</button><button class="b alt" data-a="feed">喂食 15🪙</button><button class="b alt" data-a="wash">洗点 20🪙</button><button class="b alt" data-a="rel">${REL===p.id?'确认放生?':'放生'}</button></div></div>`;
+}
+function battleCommands(cur){
+  if(!cur)return '';
+  const locked=B.auto?'disabled':'',skills=Object.entries(CAST).filter(([c,s])=>cur.p.sk.includes(s.skill));
+  return `<div class="sub" style="margin-bottom:6px">${B.auto?'自动决策中':'指令：'+cur.p.n+'（'+(B.pi+1)+'/'+B.T.length+'）'} · 魔法 ${cur.mp}/${cur.mm}${B.pend?' · 请选择'+(targetSide(B.pend)=='ally'?(MEDICINE[B.pend]?'我方用药目标':'我方治疗目标'):'敌方目标'):''}</div><div class="row">
+  <button class="b" data-a="cmd" data-v="a" ${locked}>⚔️ 普攻 · 回蓝4</button>
+  ${skills.map(([c,s])=>`<button class="b" data-a="cmd" data-v="${c}" title="${SK[s.skill]}" ${B.auto||cur.mp<s.cost?'disabled':''}>${s.skill} · ${s.cost}蓝${cur.mp<s.cost?'（不足）':''}</button>`).join('')}
+  <button class="b alt" data-a="cmd" data-v="d" ${locked}>🛡 防御 · 回蓝8</button>${Object.entries(MEDICINE).map(([c,id])=>`<button class="b alt" data-a="cmd" data-v="${c}" ${B.auto||!medicineLeft(c)||B.tw&&wrule()==1?'disabled':''}>${ITEMS[id].e} ${ITEMS[id].n}×${medicineLeft(c)}</button>`).join('')}
+  ${B.pend?'<button class="b alt" data-a="cmd" data-v="x">取消选目标</button>':''}<button class="b alt" data-a="auto">${B.auto?'停止自动':'自动'}</button></div>${potionSettings()}`;
+}
+function battleArena(F,T,cur){
+  const enemyTarget=!B.auto&&targetSide(B.pend)=='enemy',allyTarget=!B.auto&&targetSide(B.pend)=='ally',pct=x=>Math.max(0,x.hp)/x.mx*100;
+  return `<div class="card"><div class="sub">敌方${enemyTarget?'（点击选择目标）':''}</div><div class="team">${F.map((f,i)=>`<div class="fc ${f.hp<=0?'dead':''} ${enemyTarget&&f.hp>0?'tgt':''}" ${enemyTarget&&f.hp>0?`data-a="tgt" data-v="${i}"`:''}><b>${f.e}</b>${f.n} Lv${f.lv}${ELC[f.el]}<br><span class="sub">${(f.sk||[]).join(' ')}</span>${f.boss&&f.hp>0?`<span class="intent">${intent(f)}</span>`:''}${f.stun&&!f.boss?'<span class="tag">定身</span>':''}<div class="hb"><div class="hf e" style="width:${pct(f)}%"></div></div><span class="sub">${Math.max(0,f.hp)}/${f.mx}</span></div>`).join('')}</div>
+  <div class="sub">我方${allyTarget?(MEDICINE[B.pend]?'（点击选择用药目标）':'（点击选择治疗目标）'):''}</div><div class="team">${T.map((x,i)=>`<div class="fc ${x.hp<=0?'dead':''} ${cur===x?'cur':''} ${allyTarget&&x.hp>0?'ally-target':''}" ${allyTarget&&x.hp>0?`data-a="ally" data-v="${i}"`:''}><b>${emo(x.p)}</b>${x.p.n} Lv${x.p.lv}${ELC[x.p.el]}<div class="hb"><div class="hf" style="width:${pct(x)}%"></div></div><span class="sub">${Math.max(0,x.hp)}/${x.mx}</span><div class="hb mp"><div class="hf m" style="width:${x.mp/x.mm*100}%"></div></div><span class="sub">魔法 ${x.mp}/${x.mm}</span>${x.guardUntil>B.r?'<br><span class="tag">护佑</span>':''}${x.stun?'<br><span class="tag">眩晕</span>':''}</div>`).join('')}</div>
+  ${B.run&&F.some(f=>f.hp>0&&f.boss&&f.phase=='burst'&&!f.stun)?'<div class="intent">⚠️ Boss 已蓄力！本回合可防御减伤50%，或用定身打断、集火击倒。</div>':''}
+  <div id="log">${LOGL.slice(-12).join('<br>')}</div>${lootOdds(F)}
+  <details class="sub battle-help"><summary>战斗规则与技能</summary><div>每场开始气血与魔法补满。普攻不耗蓝并回复4魔法；防御减伤50%并回复8魔法。治疗与红蓝药只能选择存活队友。红药恢复40%气血，蓝药恢复40%魔法，用药占用一次行动，目标已满时不消耗。禁药周两种药都不能使用。</div><div>战斗经验为固定总量，胜利后由本场实际参战宠物平分，倒下的宠物也有份。除不尽的余数按上阵顺序各补1点。</div><div>首领循环：普攻（部分首领低血时治疗）→ 蓄力 → 群攻。定身可打断已蓄力的群攻；速度快的控制宠更容易抢先出手。自动战斗会根据血量、魔法和首领行动选择技能。</div>${[...new Set(T.flatMap(x=>x.p.sk))].map(k=>`<div><b>${k}</b>：${SK[k]||''}</div>`).join('')}</details></div>`;
+}
+
+function view(){
+  const t=S.tab,p=get(S.sel);
+  if(t=='pets')return`<div class="card"><h3>我的宠物 (${S.pets.length}/${PET_CAP})</h3><div class="row">${S.pets.map(q=>card(q)).join('')}</div></div>`+(p?detail(p):'');
+  if(t=='idle')return idleView();
+  if(t=='bag')return bagView();
+  if(t=='dex')return dexView();
+  if(t=='quest')return questView();
+  if(t=='fight'){
+    const e=enemy(S.stage),tw=S.mode=='tower',hunt=S.mode=='hunt',F=B.F||curFoes(),T=B.T||S.team.map(get).filter(p=>p&&p.life>0).map(fighter),cur=B.run?B.T[B.pi]:null,totalExp=battleExpPool(F);
+    return`${modeBar()}${tw?towerCard():hunt?huntCard():`<div class="card"><h3>世界地图 🏅${S.badges.length}/6${S.ng?' · 第'+(S.ng+1)+'周目':''}</h3><div class="row">${REG.map((r,i)=>`<button class="b ${e.ri===i?'':'alt'}" data-a="reg" data-v="${i}">${S.badges.includes(i)?'🏅':''}${r.n}${S.maxStage<i*5+1?' 🔒':''}</button>`).join('')}</div><div class="sub" style="margin-top:6px">${e.map}：${ELC[e.el]}${ELS[e.el]}系 · 馆主 ${REG[e.ri].e}${REG[e.ri].g}（第${e.ri*5+5}关）· 推荐带 ${ELC[BEAT.indexOf(e.el)]}${ELS[BEAT.indexOf(e.el)]}系宠物克制。首次击败馆主获得徽章：全队属性+2%、💎15。</div>${S.badges.length>=6?`<div class="row" style="margin-top:8px"><button class="b" data-a="ng">开启第${S.ng+2}周目：敌人更强、技能更多、奖励+50%</button></div>`:''}</div>
+    <div class="card"><div class="row" style="justify-content:space-between"><button class="b alt" data-a="st" data-v="-1">◀</button><b>第 ${S.stage} 关 · ${e.map}</b><button class="b alt" data-a="st" data-v="1">▶</button></div><div class="sub" style="text-align:center;margin-top:4px">已解锁至第 ${S.maxStage} 关${e.b?' · BOSS关':''} · 奖励 ${Math.round(e.lv*12*(e.b?3:1)*(1+.5*S.ng))}🪙 · 在宠物页上阵最多3只</div></div>
+    `}${!tw&&!hunt?`<div class="card"><button class="b ${S.farmOn?'':'alt'}" data-a="farm">${S.farmOn?'停止连续自动':'开启连续自动'}</button><div class="sub" style="margin-top:6px">${S.farmOn?(S.farmHold?'固定刷第 '+S.stage+' 关':'自动挑战新关；失败后退回上一关持续刷'):'连续自动只在页面打开时运行；退到后台按离线收益结算。'}</div></div>`:''}${!hunt||S.hunt.clears<3?`<div class="card sub">本场总经验 <b>${totalExp}</b> · ${T.length?'按 '+T.length+' 只参战平分，每只 '+Math.floor(totalExp/T.length)+(totalExp%T.length?'～'+Math.ceil(totalExp/T.length):'')+' 点':'请先上阵可参战宠物'}<br>胜利后结算，倒下的参战宠物也能获得经验。</div>`:''}${battleArena(F,T,cur)}
+    ${B.run?battleCommands(cur):hunt&&S.hunt.clears>=3?'<div class="sub">今日悬赏已完成，明天刷新。</div>':'<button class="b" style="width:100%;padding:12px" data-a="bstart">开始战斗</button>'}`;
+  }
+  if(t=='catch'){
+    const z=ZONES[S.zone],ok=S.ng||S.maxStage>=z.need;
+    return`<div class="card"><h3>选择区域</h3><div class="row">${ZONES.map((q,i)=>`<button class="b ${S.zone===i?'':'alt'}" data-a="zone" data-v="${i}">${q.n}${!S.ng&&S.maxStage<q.need?' 🔒':''}</button>`).join('')}</div></div>
+  <div class="card"><h3>${z.n} · Lv${z.lo}-${z.hi}</h3><div class="sub" style="line-height:1.7">${z.tag}<br>常见宠物：${z.sp.map(i=>SP[i].e+SP[i].n).join(' ')}<br>五行：${[...new Set(z.el)].map(i=>ELC[i]+ELS[i]).join(' ')}<br>技能倾向：${z.sk.join('、')}<br>稀有：${SP[z.rs].e}${SP[z.rs].n}（${S.dex[z.rs]?'已发现':'未发现'}）普通符 ${(z.rare*100).toFixed(1)}% · 超级符 ${(Math.min(.15,z.rare*4)*100).toFixed(1)}%<br>变异宠物资质更高、成长更快，并多1个技能栏（最多5个）<br>普通符：宝宝 ${Math.round(z.baby*100)}% · 变异 ${(z.mut*100).toFixed(1)}%<br>超级符：宝宝 ${Math.round(Math.min(.6,z.baby*3.5)*100)}% · 变异 ${(z.mut*600).toFixed(1)}%${ok?'':'<br>🔒 需通关战斗第 '+(z.need-1)+' 关解锁'}</div></div>
+  <div class="card"><h3>捕捉</h3><div class="row"><button class="b" data-a="cap" data-v="0">普通符 ${z.cost}🪙</button><button class="b" data-a="cap" data-v="1">超级符 ${z.gem}💎</button></div><div class="sub" style="margin-top:6px">高等级区域的宠物等级更高，但宝宝和变异更稀有；低等级区域更容易出高资质的宝宝，但要从头养。部分元素敏感宠物（蛟龙、大海龟、巨蛙、烈焰龙）可能带有五行弱点，弱点属性一定克制宠物自身五行。它们出现弱点的概率：野生40%、宝宝20%、变异5%。</div></div>
+  ${LAST?`<div class="card"><h3>捕获成功!</h3><div class="row">${card(LAST,'sel')}</div><div class="sub" style="margin-top:6px">五行 ${ELC[LAST.el]}${ELS[LAST.el]} · 性格${NAT[LAST.nat][0]} · 特性${AB[LAST.ab][0]} · 成长率 ${LAST.g}<br>技能 ${LAST.sk.join('、')||'无'}</div>${aptitudeView(LAST)}</div>`:''}`;
+  }
+  if(t=='fuse')return`<div class="card"><h3>炼化 (100🪙)</h3><div class="sub" style="margin-bottom:8px">选择两只宠物，消耗它们炼出一只新宠物：资质取平均并有机会提升，最低为宝宝品质，从 Lv1 开始。父母独有技能各有50%概率继承，共有技能为80%；另有30%概率触发技能共鸣，额外继承最多2个未继承的技能。最终数量受新宠技能格限制；元素敏感宠物只能继承符合自身五行的弱点。</div><div class="row">${S.pets.map(q=>`<button class="pc ${S.mg.includes(q.id)?'sel':''}" data-a="mg" data-v="${q.id}"><b>${emo(q)}</b>${q.n}<br>Lv${q.lv} · 技能${q.sk.length}</button>`).join('')}</div><button class="b" style="margin-top:10px" data-a="fuse">炼化</button></div>`;
+  return`<div class="card"><h3>商店</h3><div class="row" style="flex-direction:column;align-items:stretch;gap:8px"><button class="b" data-a="ad">看广告 +100🪙 (模拟)</button><button class="b" data-a="daily">每日领取 +10💎</button><button class="b alt" data-a="nat">性格药 200🪙：重随选中宠物性格</button><button class="b alt" data-a="ab">特性胶囊 8💎：重随选中宠物特性</button><button class="b alt" data-a="stone">购买进化石 600🪙（持有 ${S.stone}）</button><button class="b alt" data-a="buyitem" data-v="red,3">红药 x3 · 30🪙（恢复40%气血）</button><button class="b alt" data-a="buyitem" data-v="blue,3">蓝药 x3 · 45🪙（恢复40%魔法）</button><button class="b alt" data-a="buyitem" data-v="exp,1">经验丹 x1 · 100🪙（购买后放入背包）</button><button class="b alt" data-a="buyitem" data-v="life,1">长寿丹 x1 · 20💎（购买后放入背包）</button><button class="b alt" data-a="tab" data-v="bag">🎒 查看背包与使用道具</button><button class="b alt" data-a="iap">购买 60💎 $0.99 (演示，不扣费)</button><button class="b alt" data-a="reset">重置存档</button></div></div>`;
+}
+function render(){
+  $('coins').textContent='🪙 '+S.coins;$('gems').textContent='💎 '+S.gems;
+  $('tabs').innerHTML=TABS.map(t=>`<button class="${S.tab===t[0]?'on':''}" data-a="tab" data-v="${t[0]}">${t[1]}${(t[0]=='idle'&&S.off)||(t[0]=='quest'&&claimable())?'🔴':''}</button>`).join('');
+  $('main').innerHTML=view();
+}
+function addPet(p){if(S.pets.length>=PET_CAP){toast('宠物栏已满，请先放生');return false}S.pets.push(p);dx(p);return true}
+const alive=a=>a.filter(x=>x.hp>0),nxt=i=>{for(;i<B.T.length;i++)if(B.T[i].hp>0)return i;return -1};
+function foes(st){
+  const e=enemy(st),b=e.b,m=1+.7*S.ng;
+  return[0,1,2].map(i=>{
+    const bb=b&&i==1,mo=MON[(st+i)%5],k=b?(bb?1:.5):.85,ak=b?(bb?1:.6):.85,f={...e,n:bb?e.n:mo[1],e:bb?e.e:mo[0],el:b?e.el:(e.el+(i==2?2:0))%5};
+    f.hp=f.mx=Math.round(e.hp*k*m);f.atk=Math.round(e.atk*ak*m);f.def=Math.round(e.def*(b&&!bb?.6:1)*m);
+    const n=b?1:Math.min(3,(st<3?0:st<10?1:2)+S.ng);
+    f.boss=bb;f.phase='strike';f.sk=bb?GSK[e.ri].slice():Array.from({length:n},(_,j)=>FSK[(st*3+i*2+j*5)%6]);return f});
+}
+function stopAutoRun(){if(AUTO_TIMER){clearInterval(AUTO_TIMER);AUTO_TIMER=null}B.auto=0}
+function scheduleFarm(){
+  if(FARM_TIMER)clearTimeout(FARM_TIMER);
+  if(!S.farmOn||S.mode!='main'||B.run||document.hidden)return;
+  FARM_TIMER=setTimeout(()=>{FARM_TIMER=null;if(!S.farmOn||S.mode!='main'||B.run||document.hidden)return;bstart();if(B.run){autoRun();render()}else{S.farmOn=false;save();render()}},700);
+}
+function bstart(){
+  if(B.run)return;
+  if(S.mode=='hunt'){huntRoll();if(S.hunt.clears>=3)return toast('今日悬赏已完成，明天再来')}
+  const ps=S.team.map(get).filter(p=>p&&p.life>0);
+  if(!ps.length)return toast('请先上阵宠物（寿命需大于0）');
+  B={run:1,tw:S.mode=='tower',hunt:S.mode=='hunt',r:0,auto:0,pi:0,pend:null,T:ps.map(fighter),F:curFoes()};
+  LOGL=['遭遇 '+B.F.map(f=>f.n).join('、')+'！'];
+  if(B.F.some(f=>f.boss))LOGL.push('首领规律：普攻／治疗 → 蓄力 → 群攻；定身可打断已蓄力的群攻。');
+  render();
+}
+const canCast=(t,c)=>!!CAST[c]&&t.p.sk.includes(CAST[c].skill)&&t.mp>=CAST[c].cost;
+function autoPick(t){
+  const enemies=alive(B.F),allies=alive(B.T);if(!enemies.length)return;
+  const focus=enemies.slice().sort((x,y)=>x.hp-y.hp)[0],danger=enemies.find(f=>f.boss&&f.phase=='burst'&&!f.stun);
+  const injured=allies.slice().sort((x,y)=>x.hp/x.mx-y.hp/y.mx)[0];
+  t.cmd='a';t.tg=B.F.indexOf(focus);
+  const useMeds=S.autoPotion&&!(B.tw&&wrule()==1);
+  const needPotion=allies.filter(x=>x.hp*100<=x.mx*S.potionRules.red&&!B.T.some(y=>y.hp>0&&y.cmd=='h'&&B.T[y.tg]===x)).sort((x,y)=>x.hp/x.mx-y.hp/y.mx)[0];
+  if(useMeds&&S.potionRules.red>0&&medicineLeft('h')>0&&needPotion){t.cmd='h';t.tg=B.T.indexOf(needPotion);return}
+  if(canCast(t,'heal')&&injured.hp<injured.mx*.5){t.cmd='heal';t.tg=B.T.indexOf(injured);return}
+  if(danger){
+    if(canCast(t,'seal')&&!(danger.controlImmuneUntil>=B.r+1)){t.cmd='seal';t.tg=B.F.indexOf(danger);return}
+    if(canCast(t,'buff')&&allies.some(x=>!(x.guardUntil>=B.r+1))){t.cmd='buff';return}
+    if(danger.hp>t.a.atk*.8){t.cmd='d';return}
+    t.tg=B.F.indexOf(danger);t.cmd=canCast(t,'m')?'m':'a';return;
+  }
+  const learned=Object.values(CAST).filter(s=>t.p.sk.includes(s.skill));
+  if(useMeds&&S.potionRules.blue>0&&medicineLeft('u')>0&&learned.length&&t.mp*100<=t.mm*S.potionRules.blue){t.cmd='u';t.tg=B.T.indexOf(t);return}
+  if(canCast(t,'buff')&&allies.length>1&&allies.some(x=>x.hp<x.mx*.8)&&allies.some(x=>!(x.guardUntil>=B.r+1))){t.cmd='buff';return}
+  if(canCast(t,'seal')){const target=enemies.find(f=>!f.stun&&!(f.controlImmuneUntil>=B.r+1)&&f.hp>t.a.atk*1.5);if(target){t.cmd='seal';t.tg=B.F.indexOf(target);return}}
+  if(canCast(t,'g')&&enemies.length>=2){t.cmd='g';return}
+  if(canCast(t,'m')&&(t.a.mag*1.8>t.a.atk||focus.hp>t.a.atk)){t.cmd='m';return}
+  if(canCast(t,'heal')&&injured.hp<injured.mx*.75){t.cmd='heal';t.tg=B.T.indexOf(injured)}
+}
+function autoRun(){
+  if(AUTO_TIMER)clearInterval(AUTO_TIMER);if(!B.run||document.hidden)return;B.auto=1;B.pend=null;
+  AUTO_TIMER=setInterval(()=>{
+    if(!B.run||!B.auto||document.hidden){stopAutoRun();return}
+    B.T.forEach(t=>{if(t.hp>0&&!t.cmd)autoPick(t)});resolve();
+  },500);
+}
+function bpick(c){
+  if(!B.run||B.auto)return;
+  const t=B.T[B.pi];if(!t||t.hp<=0)return;
+  if(c=='x'){B.pend=null;render();return}
+  if(!['a','d',...Object.keys(MEDICINE),...Object.keys(CAST)].includes(c))return;
+  if(CAST[c]&&!t.p.sk.includes(CAST[c].skill))return toast('未学会'+CAST[c].skill);
+  if(CAST[c]&&t.mp<CAST[c].cost)return toast('魔法不足，普攻回复4点，防御回复8点');
+  if(MEDICINE[c]&&B.tw&&wrule()==1)return toast('本周规则：塔内禁用红药和蓝药');
+  if(MEDICINE[c]&&medicineLeft(c)<1)return toast('没有可用的'+ITEMS[MEDICINE[c]].n+'（已选指令会预留道具）');
+  if(MEDICINE[c]&&!B.T.some(x=>medicineNeeded(c,x)))return toast(c=='h'?'队友气血已满':'队友魔法已满');
+  if(targetSide(c)=='enemy'||targetSide(c)=='ally'){B.pend=c;render();return}
+  commit(c,0);
+}
+function btgt(i,side='enemy'){
+  if(!B.run||B.auto||!B.pend||targetSide(B.pend)!=side)return;
+  const target=(side=='ally'?B.T:B.F)[i];if(!target||target.hp<=0)return;
+  if(MEDICINE[B.pend]&&!medicineNeeded(B.pend,target))return toast(B.pend=='h'?'该宠物气血已满':'该宠物魔法已满');
+  if(MEDICINE[B.pend]&&!medicineLeft(B.pend))return toast('道具已被其他指令预留');
+  commit(B.pend,+i);
+}
+function commit(c,tg){
+  const t=B.T[B.pi];t.cmd=c;t.tg=tg;B.pend=null;
+  const n=nxt(B.pi+1);if(n<0)resolve();else{B.pi=n;render()}
+}
+function restoreMana(t,n){const h=Math.min(n,t.mm-t.mp);t.mp+=h;return h}
+function healPet(t,n){const h=Math.max(0,Math.min(Math.round(n),t.mx-t.hp));if(t.hp<=0)return 0;t.hp+=h;return h}
+function hurtPet(t,d){
+  if(t.hp<=0)return 0;const actual=Math.min(t.hp,d);t.hp=Math.max(0,t.hp-d);
+  if(t.hp>0)return actual;
+  if(t.p.ab==2&&!t.used){t.hp=1;t.used=1;LOGL.push(t.p.n+'发动不屈，保留1点气血');return actual}
+  if(t.p.sk.includes('神佑')&&!t.reviveUsed){
+    t.reviveUsed=1;
+    if(Math.random()<.3){t.hp=Math.max(1,Math.round(t.mx*.4));t.stun=0;t.revivedRound=B.r;LOGL.push(t.p.n+'触发神佑！复活并恢复'+t.hp+'气血');return actual}
+    LOGL.push(t.p.n+'神佑未触发');
+  }
+  LOGL.push('　'+t.p.n+'倒下');return actual;
+}
+function hurtFoe(f,d,t,physical){
+  const actual=Math.min(f.hp,d);f.hp=Math.max(0,f.hp-d);
+  if(f.hp<=0)LOGL.push('　'+f.n+'倒下');
+  if(physical&&(f.sk||[]).includes('反震')&&t.hp>0){const reflected=Math.max(1,Math.round(actual*.25*(t.guardUntil>=B.r?.75:1)));LOGL.push(f.n+'反震'+reflected+'伤害');hurtPet(t,reflected)}
+  return actual;
+}
+function pAct(t){
+  if(t.hp<=0)return;
+  if(t.revivedRound===B.r){LOGL.push(t.p.n+'复活后休整，本回合不再行动');return}
+  if(t.stun){t.stun=0;t.stunImmuneUntil=B.r+1;LOGL.push(t.p.n+'被眩晕，无法行动');return}
+  const {p,a}=t,L=LOGL,has=k=>p.sk.includes(k),al=alive(B.F);if(!al.length)return;
+  if(t.cmd=='d'){L.push(p.n+'防御，魔法+'+restoreMana(t,8));return}
+  if(MEDICINE[t.cmd]){
+    const id=MEDICINE[t.cmd],target=B.T[t.tg];
+    if(!itemCount(id)||B.tw&&wrule()==1){L.push(p.n+'无法用药，改为普通攻击');t.cmd='a'}
+    else if(!medicineNeeded(t.cmd,target)){L.push(p.n+'取消用药：目标已倒下或已恢复满，不消耗'+ITEMS[id].n);return}
+    else{S.bag[id]--;const amount=t.cmd=='h'?healPet(target,Math.max(1,Math.round(target.mx*.4))):restoreMana(target,Math.max(1,Math.round(target.mm*.4)));L.push(p.n+'为'+target.p.n+'使用'+ITEMS[id].n+'，恢复'+amount+(t.cmd=='h'?'气血':'魔法'));save();return}
+  }
+  const cast=CAST[t.cmd];
+  if(cast){
+    if(!canCast(t,t.cmd)){L.push(p.n+'无法施法，改为普通攻击');t.cmd='a'}
+    else{
+      t.mp-=cast.cost;L.push(p.n+'施放'+cast.skill+'，消耗'+cast.cost+'魔法');
+      if(t.cmd=='heal'){
+        let ally=B.T[t.tg];if(!ally||ally.hp<=0)ally=alive(B.T).sort((x,y)=>x.hp/x.mx-y.hp/y.mx)[0];
+        L.push('　'+ally.p.n+'恢复'+healPet(ally,a.mag*1.1+ally.mx*.1)+'气血');return;
+      }
+      if(t.cmd=='buff'){alive(B.T).forEach(x=>x.guardUntil=B.r+1);L.push('　全队获得护佑：本回合及下回合减伤25%');return}
+      let f=B.F[t.tg];if(!f||f.hp<=0)f=al.slice().sort((x,y)=>x.hp-y.hp)[0];
+      if(t.cmd=='seal'){
+        if(f.controlImmuneUntil>=B.r||f.stun){L.push('　'+f.n+'暂时免疫定身');return}
+        if(Math.random()<(f.boss?.45:.75)){f.stun=1;if(f.phase=='burst'){f.phase='strike';L.push('　打断'+f.n+'的蓄力！')}L.push('　'+f.n+'被定身，跳过下一次行动')}
+        else L.push('　'+f.n+'抵抗了定身');return;
+      }
+      const targets=t.cmd=='g'?al:[f],power=t.cmd=='g'?.85:1.8;
+      for(const foe of targets){const em=ELM(3,foe.el),d=Math.max(1,Math.round((a.mag*power-foe.def*.2)*em*R(.9,1.1)));L.push('　'+foe.n+'受到'+d+'火系伤害'+(em>1?'（克制）':em<1?'（被克）':''));hurtFoe(foe,d,t,false)}
+      return;
+    }
+  }
+  let f=B.F[t.tg];if(!f||f.hp<=0)f=al.slice().sort((x,y)=>x.hp-y.hp)[0];
+  const em=ELM(p.el,f.el),bf=(1+.08*alive(B.T).filter(x=>x.p.ab==5).length)*(p.ab==1&&t.hp<t.mx*.4?1.3:1);
+  let d=Math.max(1,Math.round((a.atk-f.def*(p.ab==4?.4:.6))*em*bf*R(.9,1.1))),tx='攻击';
+  if(has('必杀')&&Math.random()<.25){d*=2;tx='必杀暴击'}
+  L.push(p.n+tx+f.n+'，'+d+'伤害'+(em>1?'（克制）':em<1?'（被克）':'')+'，魔法+'+restoreMana(t,4));
+  const actual=hurtFoe(f,d,t,true);
+  if(has('吸血')&&t.hp>0)L.push('　吸血恢复'+healPet(t,actual*.3));
+  if(t.hp>0&&t.revivedRound!==B.r&&has('连击')&&f.hp>0&&Math.random()<.4){const d2=Math.max(1,Math.round(d*.6));L.push('连击！追加'+d2);const hit=hurtFoe(f,d2,t,true);if(has('吸血')&&t.hp>0)L.push('　吸血恢复'+healPet(t,hit*.3))}
+}
+function fAct(f){
+  if(f.hp<=0)return;
+  if(f.stun){f.stun=0;f.controlImmuneUntil=B.r+1;LOGL.push(f.n+'被定身，跳过行动');return}
+  const al=alive(B.T);if(!al.length)return;const has=k=>(f.sk||[]).includes(k);
+  let burst=false;
+  if(f.boss){
+    if(f.phase=='charge'){f.phase='burst';LOGL.push('⚠️ '+f.n+'开始蓄力，下回合将发动群攻！可防御、定身或集火击倒');return}
+    burst=f.phase=='burst';f.phase=burst?'strike':'charge';
+    if(!burst&&has('治疗')&&f.hp<f.mx*.5){const h=Math.min(f.mx-f.hp,Math.round(f.mx*.15));f.hp+=h;LOGL.push(f.n+'休整治疗，恢复'+h);return}
+  }else if(has('治疗')&&Math.random()<.3){const ally=alive(B.F).sort((x,y)=>x.hp/x.mx-y.hp/y.mx)[0];if(ally.hp<ally.mx*.8){const h=Math.min(ally.mx-ally.hp,Math.round(ally.mx*.15));ally.hp+=h;LOGL.push(f.n+'为'+ally.n+'治疗，恢复'+h);return}}
+  const hit=(t,mul,tag)=>{
+    const p=t.p,em=ELM(f.el,p.el),atk=f.atk*(has('狂暴')&&f.hp<f.mx*.5?1.4:1),weak=p.sk.includes('弱'+ELS[f.el]),guard=t.guardUntil>=B.r;
+    let d=Math.max(1,Math.round(Math.max(1,atk-t.a.def*.6)*em*R(.9,1.1)*(t.df?.5:1)*(guard?.75:1)*(p.ab==3?.88:1)*(weak?1.2:1)*mul)),tx=tag||'攻击';
+    if(!burst&&has('必杀')&&Math.random()<.2){d=Math.round(d*1.8);tx='必杀'}
+    LOGL.push(f.n+tx+p.n+'，'+d+'伤害'+(t.df?'（防御）':'')+(guard?'（护佑）':'')+(weak?'（弱点）':''));
+    const actual=hurtPet(t,d);
+    if(has('吸血')){const h=Math.min(f.mx-f.hp,Math.round(actual*.3));f.hp+=h;LOGL.push('　'+f.n+'吸血'+h)}
+    if(p.sk.includes('反震')){const r=Math.max(1,Math.round(actual*.25));f.hp=Math.max(0,f.hp-r);LOGL.push('　'+p.n+'反震'+r)}
+    if(!burst&&has('眩晕')&&t.hp>0&&t.revivedRound!==B.r&&!(t.stunImmuneUntil>=B.r)&&Math.random()<.25){t.stun=1;LOGL.push('　'+p.n+'被眩晕！')}
+  };
+  if(burst){LOGL.push('💥 '+f.n+'释放蓄力群攻！');for(const t of al){if(f.hp<=0)break;hit(t,1.35,'蓄力震击')}}
+  else if(!f.boss&&has('群攻')&&Math.random()<.3){LOGL.push(f.n+'发动群攻！');for(const t of al){if(f.hp<=0)break;hit(t,.5,'震击')}}
+  else{const lo=al.slice().sort((x,y)=>x.hp-y.hp)[0];hit(Math.random()<.4?lo:pick(al),1)}
+  if(f.hp<=0)LOGL.push('　'+f.n+'倒下');
+}
+function endCheck(){if(!alive(B.F).length){bend(1);return 1}if(!alive(B.T).length){bend(0);return 1}return 0}
+function resolve(){
+  LOGL.push('— 第'+(++B.r)+'回合 —');
+  B.T.forEach(t=>{
+    t.df=t.cmd=='d'&&!t.stun;
+    if(t.hp>0&&t.p.sk.includes('再生')){const h=healPet(t,Math.max(1,Math.round(t.mx*.05)));if(h)LOGL.push(t.p.n+'再生恢复'+h)}
+  });
+  const acts=[];
+  B.T.forEach(t=>{if(t.hp>0)acts.push({t,spd:t.a.spd+R(0,3)+(t.p.ab==0?100:0)})});
+  B.F.forEach(f=>{if(f.hp>0)acts.push({f,spd:f.spd+R(0,3)})});
+  acts.sort((x,y)=>y.spd-x.spd);
+  for(const x of acts){if(!alive(B.F).length||!alive(B.T).length)break;x.t?pAct(x.t):fAct(x.f)}
+  B.T.forEach(t=>t.cmd=null);
+  if(endCheck())return;
+  if(B.r>=30){LOGL.push('达到30回合，队伍撤退');return bend(0)}
+  B.pi=nxt(0);B.pend=null;render();
+}
+
+function bend(win){
+  if(!B.run||B.rewarded)return;B.rewarded=true;
+  const loot=win?lootContext():null;
+  const wasFarm=S.farmOn&&S.mode=='main';B.run=0;stopAutoRun();if(!wasFarm)B.T.forEach(t=>t.p.life--);if(win)qp('win');
+  if(win&&B.tw)twin();else if(win&&B.hunt)hwin();else if(win){const e=B.F[1],c=Math.round(e.lv*12*(e.b?3:1)*(1+.5*S.ng)),ex=battleExpPool(B.F,'main');S.coins+=c;const xp=rewardBattleExp(ex);LOGL.push('🎉 胜利! +'+c+'🪙，'+xp);if(e.b){S.stone++;LOGL.push('获得 进化石 x1');const ri=Math.floor((S.stage-1)/5)%6;if(S.stage<=30&&!S.badges.includes(ri)){S.badges.push(ri);S.gems+=15;LOGL.push('🏅 获得'+REG[ri].n+'徽章，💎+15，全队属性+2%')}}if(S.stage==S.maxStage)S.maxStage++}
+  else{B.T.forEach(t=>t.p.loy=Math.max(0,t.p.loy-10));LOGL.push('💀 全员倒下，忠诚度 -10')}
+  if(win)grantBattleLoot(loot);
+  if(wasFarm){
+    if(win&&!S.farmHold){if(S.stage<30&&S.stage<S.maxStage)S.stage++;else S.farmHold=true}
+    if(!win){if(S.stage>1){S.stage--;S.farmHold=true;LOGL.push('↩️ 连续自动退回第'+S.stage+'关挂机')}else{S.farmOn=false;S.farmHold=false;LOGL.push('连续自动已停止：第1关未通过')}}
+    B.F=null;B.T=null;
+  }
+  window.hap&&hap();save();render();if(S.farmOn)scheduleFarm();
+}
+const rate=p=>Math.round(15+p.lv*2.5+p.ap.reduce((a,b)=>a+b)/400+p.q*10);
+function jobRow(p){
+  let r;
+  if(S.team.includes(p.id))r='<span class="sub">⭐ 参战中，无法派遣</span>';
+  else if(p.job){const h=Math.min(8,(Date.now()-p.job)/36e5);r=`<span class="sub">⏳ ${h.toFixed(1)}h/8h</span> <button class="b" data-a="jc" data-v="${p.id}">收取 ${Math.round(rate(p)*h)}🪙</button> <button class="b alt" data-a="jr" data-v="${p.id}">收回</button>`}
+  else r=`<button class="b alt" data-a="jb" data-v="${p.id}">派遣</button>`;
+  return`<div class="at"><span>${emo(p)} ${p.n} Lv${p.lv} <span class="sub">${rate(p)}🪙/时</span></span><span>${r}</span></div>`;
+}
+function idleView(){
+  const o=S.off,naturalHours=o?Math.max(0,o.h-(o.adH||0)):0;
+  return`<div class="card"><h3>离线收益</h3>${o?`<div>自然离线 ${naturalHours.toFixed(1)} / ${capH()} 小时${o.adH?'<br>🎬 广告加速 +'+o.adH.toFixed(1)+' 小时':''}</div><div class="sub" style="line-height:1.7;margin-top:4px">🪙 ${o.c} · 全队经验 +${o.exp}<br>红药 ${Math.floor(o.h*1.5)} · 蓝药 ${Math.floor(o.h)} · 进化石碎片 ${Math.floor(o.h/2)}（5片合成1个进化石）· 💎 ${Math.floor(o.h/4)}<br>队伍休整：忠诚度 +${Math.min(20,Math.round(o.h*2.5))}${o.h>=4?'<br>✨ 累计收益满4小时，可能触发奇遇（野生宠物或宝箱）':''}</div><div class="row" style="margin-top:8px"><button class="b" data-a="oc" ${B.run?'disabled':''}>${B.run?'战斗结束后领取':'领取'}</button></div>`:`<div class="sub" style="line-height:1.7">暂无。离开游戏后自动结算：金币、全队经验、红药、蓝药、进化石碎片、钻石，还会恢复队伍忠诚度，满4小时有机会触发奇遇。<br>离线上限 ${capH()} 小时（每枚徽章+1小时，每个周目+2小时）。</div>`}<div class="row" style="margin-top:10px"><button class="b alt" data-a="offad" ${OFF_AD?'disabled':''}>${OFF_AD?'🎬 模拟广告播放中…':'🎬 看广告 · 加速2小时（模拟）'}</button></div><div class="sub" style="margin-top:6px;line-height:1.6">看完后，按当前进度增加2小时挂机收益，加入待领取奖励。广告加速不占自然离线上限。</div>${S.rep?`<div class="sub" style="margin-top:8px">上次领取：${S.rep}</div>`:''}</div>
+  ${expView()}<div class="card"><h3>宠物派遣</h3><div class="sub" style="margin-bottom:8px">未参战的宠物外出打工，按时间产出金币、红药和蓝药（最多 8 小时），宠物越强收益越高。</div>${S.pets.map(jobRow).join('')}</div>`;
+}
+function addOfflineHours(h,ad=false){
+  const o=S.off||{c:0,exp:0,h:0,adH:0},lv=2+Math.max(1,S.maxStage-1)*3;
+  S.off={...o,c:o.c+Math.round(h*12*lv*3),exp:o.exp+Math.round(h*12*lv*5),h:o.h+h,adH:(o.adH||0)+(ad?h:0)};
+}
+function watchOfflineAd(){
+  if(OFF_AD)return;OFF_AD=true;render();toast('模拟广告播放中…');
+  setTimeout(()=>{if(!OFF_AD)return;OFF_AD=false;addOfflineHours(2,true);save();render();toast('已增加2小时挂机收益，请到挂机页领取')},1500);
+}
+function checkOff(){
+  const n=Date.now(),o=S.off||{c:0,exp:0,h:0},naturalHours=Math.max(0,o.h-(o.adH||0)),el=Math.max(0,Math.min(n-(S.last||n),(capH()-naturalHours)*36e5));
+  if(el>6e4){addOfflineHours(el/36e5);toast('离线收益可领取（挂机页）')}
+  S.last=n;save();
+}
+function claim(){
+  const o=S.off;if(!o)return;
+  const h=o.h,pot=Math.floor(h*1.5),blue=Math.floor(h),sh=Math.floor(h/2),gm=Math.floor(h/4),ly=Math.min(20,Math.round(h*2.5));
+  let up=0,st=0,ev='';
+  S.coins+=o.c;addItem('red',pot);addItem('blue',blue);S.shard+=sh;S.gems+=gm;
+  S.team.map(get).filter(Boolean).forEach(p=>{up+=gain(p,o.exp);p.loy=Math.min(100,p.loy+ly)});
+  while(S.shard>=5){S.shard-=5;S.stone++;st++}
+  if(h>=4&&Math.random()<Math.min(.35,.2+.03*(h-4))){
+    if(Math.random()<.5){
+      const z=pick(ZONES.filter(z=>S.ng||S.maxStage>=z.need));
+      if(S.pets.length>=PET_CAP){S.gems+=3;ev='；奇遇：遇到野生宠物，但宠物栏已满，送你💎3'}
+      else{const np=mk(pick(z.sp),RI(z.lo,Math.round((z.lo+z.hi)/2)),Math.random()<z.baby*2?1:0,z);addPet(np);ev='；奇遇：一只野生'+np.n+'(Lv'+np.lv+')跟你回家了!'}
+    }else{S.gems+=6;addItem('red',3);addItem('blue',2);ev='；奇遇：发现宝箱，💎6、红药x3、蓝药x2'}
+  }
+  S.rep='🪙'+o.c+' · 经验+'+o.exp+(up?'(升级'+up+'次)':'')+' · 红药'+pot+' · 蓝药'+blue+' · 碎片'+sh+(st?'(进化石+'+st+')':'')+' · 💎'+gm+' · 忠诚+'+ly+ev;
+  S.off=null;toast('离线收益已领取');
+}
+function act(a,v){
+  if(B.run&&!['tab','cmd','auto','farm','tgt','ally','dq','ac','autopot','bagmed','aptinfo','offad','potrule'].includes(a))return;
+  const p=get(S.sel);
+  if(a=='tab'){S.tab=v;REL=0}
+  else if(a=='sel'){S.sel=+v;REL=0}
+  else if(a=='aptinfo'){const [id,index]=String(v).split(',').map(Number),pet=get(id)||(LAST?.id===id?LAST:null);if(!pet||!Number.isInteger(index)||index<0||index>=pet.ap.length)return;APT_INFO=APT_INFO?.id===id&&APT_INFO.index===index?null:{id,index};render();return}
+  else if(a=='autopot'){S.autoPotion=!S.autoPotion;toast('自动用药已'+(S.autoPotion?'开启，会消耗背包红蓝药':'关闭'))}
+  else if(a=='potrule'){const [id,raw]=String(v).split(','),delta=Number(raw);if(!['red','blue'].includes(id)||![-5,5].includes(delta))return;S.potionRules[id]=Math.min(95,Math.max(0,S.potionRules[id]+delta))}
+  else if(a=='offad'){watchOfflineAd();return}
+  else if(a=='buyitem'){const [id,n]=String(v).split(',');buyItem(id,Number(n))}
+  else if(a=='useitem'){useGrowthItem(v,p)}
+  else if(a=='bagmed'){if(!B.run)return toast('红蓝药在战斗中使用');if(B.auto)return toast('请先停止自动战斗再选择用药');if(!MEDICINE[v])return;S.tab='fight';bpick(v);render();return}
+  else if(a=='act'&&p){if(p.job)return toast('派遣中，请先收回');if(isExploring(p.id))return toast('探险中，请先召回');const i=S.team.indexOf(p.id);if(i>=0){if(S.team.length<2)return toast('至少保留一只上阵');S.team.splice(i,1);toast('已下阵')}else{if(S.team.length>=3)return toast('最多上阵3只');if(p.life<=0)return toast('寿命已尽');S.team.push(p.id);toast('已上阵')}S.active=S.team[0];B={run:0}}
+  else if(a=='pt'&&p){
+    const [key,n]=String(v).split(','),i=Number(key);
+    if(!Number.isInteger(i)||i<0||i>=p.at.length||!['-1','1','5','all'].includes(n))return;
+    const draft=pointDraft(p).slice(),left=p.fp-draft.reduce((a,b)=>a+b,0);
+    if(n=='-1')draft[i]=Math.max(0,draft[i]-1);else draft[i]+=Math.max(0,Math.min(n=='all'?left:Number(n),left));
+    POINT_DRAFT.set(p.id,draft);render();return;
+  }
+  else if(a=='ptconfirm'&&p){
+    const draft=pointDraft(p),total=draft.reduce((a,b)=>a+b,0);
+    if(!total)return;if(total>p.fp)return toast('可用点数不足，请撤回后重新分配');
+    p.at=p.at.map((v,i)=>v+draft[i]);p.fp-=total;POINT_DRAFT.delete(p.id);toast('加点已确认');
+  }
+  else if(a=='ptcancel'&&p){POINT_DRAFT.delete(p.id);toast('已撤回本次预分配');render();return}
+  else if(a=='wash'&&p){if(S.coins<20)return toast('金币不足');S.coins-=20;POINT_DRAFT.delete(p.id);p.at=[10,10,10,10,10];p.fp=5*p.lv}
+  else if(a=='feed'&&p){if(S.coins<15)return toast('金币不足');S.coins-=15;p.loy=Math.min(100,p.loy+15)}
+  else if(a=='book'&&p){
+    if(!SKN.includes(v))return;
+    if(p.sk.includes(v))return toast('已学会该技能');
+    if(bookCount(v)<1)return toast('没有《'+v+'》技能书，需要战斗掉落');
+    S.bag.books[v]--;
+    if(p.sk.length<slots(p)){p.sk.push(v);toast('学会了 '+v)}
+    else{const i=RI(0,p.sk.length-1),old=p.sk[i];p.sk[i]=v;toast('覆盖了 '+old+'，学会 '+v)}
+  }
+  else if(a=='purge'&&p){if(!BADSK.includes(v)||!p.sk.includes(v))return;if(S.coins<150)return toast('金币不足');S.coins-=150;p.sk.splice(p.sk.indexOf(v),1);toast('净化了 '+v)}
+  else if(a=='rel'&&p){
+    if(S.pets.length<2)return toast('至少保留一只宠物');if(isExploring(p.id)||p.job)return toast('请先收回探险或派遣中的宠物');
+    if(REL!==p.id){REL=p.id;toast('再点一次确认放生')}
+    else{S.pets=S.pets.filter(q=>q.id!==p.id);REL=0;S.sel=S.pets[0].id;S.team=S.team.filter(x=>x!==p.id);if(!S.team.length)S.team=[S.sel];S.active=S.team[0]}
+  }
+  else if(a=='st'){S.farmOn=false;S.farmHold=false;if(FARM_TIMER)clearTimeout(FARM_TIMER);stopAutoRun();B={run:0};LOGL=[];if(S.mode=='tower')S.floor=Math.max(1,Math.min(S.tower+1,S.floor+ +v));else S.stage=Math.max(1,Math.min(S.maxStage,S.stage+ +v))}
+  else if(a=='bstart')return bstart();
+  else if(a=='jb'){const q=get(+v);if(S.team.includes(q.id))return toast('上阵中无法派遣');if(isExploring(q.id))return toast('探险中');q.job=Date.now()}
+  else if(a=='jc'||a=='jr'){const q=get(+v),h=Math.min(8,(Date.now()-q.job)/36e5),c=Math.round(rate(q)*h),pt=Math.floor(h/2),mt=Math.floor(h/4);S.coins+=c;addItem('red',pt);addItem('blue',mt);qp('job');q.job=a=='jr'?0:Date.now();toast('收获 '+c+'🪙'+(pt?' 红药+'+pt:'')+(mt?' 蓝药+'+mt:''))}
+  else if(a=='oc')claim()
+  else if(a=='cmd'){if(B.run)bpick(v);return}
+  else if(a=='tgt'){if(B.run)btgt(+v);return}
+  else if(a=='ally'){if(B.run)btgt(+v,'ally');return}
+  else if(a=='auto'){if(!B.run)return;if(B.auto){stopAutoRun();S.farmOn=false;S.farmHold=false;save()}else autoRun();render();return}
+  else if(a=='farm'){if(S.mode!='main')return;if(S.farmOn){S.farmOn=false;S.farmHold=false;if(FARM_TIMER)clearTimeout(FARM_TIMER);toast(B.run?'本场战斗结束后停止连续自动':'连续自动已停止')}else{S.farmOn=true;S.farmHold=S.stage<S.maxStage||S.stage>=30;if(B.run)autoRun();else scheduleFarm();toast('连续自动已开启')}}
+  else if(a=='evo'&&p){
+    const r=evoReq(p);if(!r)return toast('已是最终形态');
+    if(p.lv<r.lv)return toast('需要 Lv'+r.lv);if(p.loy<80)return toast('忠诚度需≥80，请喂食');
+    if(S.coins<r.c)return toast('金币不足');if(S.stone<r.st)return toast('进化石不足');
+    S.coins-=r.c;S.stone-=r.st;p.ev++;p.n=(p.q==2?'变异':'')+EVN[p.sp][p.ev-1];
+    const m=EV_AP[p.ev-1];p.ap=p.ap.map(v=>Math.round(v*m));p.g=+(p.g+.05).toFixed(3);p.fp+=10;dx(p);toast('进化成功: '+p.n+'!');
+  }
+  else if(a=='reg'){const i=+v;if(S.maxStage<i*5+1)return toast('需先通关上一区域');S.farmOn=false;S.farmHold=false;if(FARM_TIMER)clearTimeout(FARM_TIMER);stopAutoRun();B={run:0};LOGL=[];S.stage=Math.max(i*5+1,Math.min(S.maxStage,i*5+5))}
+  else if(a=='nat'&&p){if(S.coins<200)return toast('金币不足');S.coins-=200;p.nat=RI(0,5);toast('性格变为 '+NAT[p.nat][0])}
+  else if(a=='ab'&&p){if(S.gems<8)return toast('钻石不足');S.gems-=8;p.ab=RI(0,5);toast('特性变为 '+AB[p.ab][0])}
+  else if(a=='xcar'){const i=+v;if(i>=carCap())return toast('还未解锁第'+(i+1)+'辆探险车');S.xsel.car=i;S.xsel.ids=[]}
+  else if(a=='xz'){if(!S.ng&&S.maxStage<ZONES[+v].need)return toast('区域未解锁');S.xsel.z=+v}
+  else if(a=='xd')S.xsel.d=+v;
+  else if(a=='xp'){const i=S.xsel.ids.indexOf(+v);if(i>=0)S.xsel.ids.splice(i,1);else if(S.xsel.ids.length<3)S.xsel.ids.push(+v);else toast('最多3只')}
+  else if(a=='xs'){const sl=S.xsel,car=sl.car;if(car>=carCap()||S.xps[car])return;if(!sl.ids.length)return toast('请选择队员');if(sl.ids.some(id=>{const q=get(id);return !q||S.team.includes(id)||q.job||isExploring(id)}))return toast('有队员已被其他任务占用，请重新选择');if(!S.ng&&S.maxStage<ZONES[sl.z].need)return toast('区域未解锁');S.xps[car]={t:Date.now(),h:DUR[sl.d],z:sl.z,ids:sl.ids.slice()};sl.ids=[];toast('第'+(car+1)+'辆探险车出发了!')}
+  else if(a=='xc'){const car=+v;if(car>=carCap()||!S.xps[car])return;xcollect(car);toast('第'+(car+1)+'辆探险结束，查看日志')}
+  else if(a=='mode'){if(v=='tower'&&!towerOpen())return toast('通关主线第30关后解锁');if(v=='hunt')huntRoll();S.farmOn=false;S.farmHold=false;if(FARM_TIMER)clearTimeout(FARM_TIMER);stopAutoRun();S.mode=v;B={run:0};LOGL=[]}
+  else if(a=='ng'){if(S.badges.length<6)return;S.farmOn=false;S.farmHold=false;if(FARM_TIMER)clearTimeout(FARM_TIMER);S.ng++;S.badges=[];S.maxStage=1;S.stage=1;B={run:0};LOGL=[];toast('第'+(S.ng+1)+'周目开始：敌人更强、技能更多!')}
+  else if(a=='dq'){dqRoll();const i=+v,d=DQ[i];if((S.dq.p[d[1]]||0)<d[2]||S.dq.c.includes(i))return toast('任务未完成');S.dq.c.push(i);d[4]();toast('领取 '+d[3])}
+  else if(a=='ac'){const i=+v,x=ACH[i];if(!x[2]()||S.ac.includes(i))return toast('尚未达成');S.ac.push(i);S.gems+=x[3];toast('成就达成 💎+'+x[3])}
+  else if(a=='stone'){if(S.coins<600)return toast('金币不足');S.coins-=600;S.stone++}
+  else if(a=='dxc'){const n=+v;if(dexScore()<n||S.dxc.includes(n))return;S.dxc.push(n);({10:()=>S.coins+=300,20:()=>S.gems+=10,30:()=>S.stone+=3,40:()=>S.gems+=30})[n]();toast('已领取图鉴奖励')}
+  else if(a=='zone')S.zone=+v;
+  else if(a=='cap'){
+    const z=ZONES[S.zone],sup=v=='1';
+    if(!S.ng&&S.maxStage<z.need)return toast('区域未解锁：需通关战斗第 '+(z.need-1)+' 关');
+    if(sup?S.gems<z.gem:S.coins<z.cost)return toast(sup?'钻石不足':'金币不足');
+    if(S.pets.length>=PET_CAP)return toast('宠物栏已满，请先放生');
+    sup?S.gems-=z.gem:S.coins-=z.cost;
+    const r=Math.random(),mu=z.mut*(sup?6:1),ba=Math.min(.6,z.baby*(sup?3.5:1)),q=r<mu?2:r<ba?1:0;
+    const rr=Math.random()<(sup?Math.min(.15,z.rare*4):z.rare),qq=rr?Math.max(q,1):q;LAST=mk(rr?z.rs:pick(z.sp),RI(z.lo,z.hi),qq,z);addPet(LAST);qp('cap');S.sel=LAST.id;toast('捕获 '+LAST.n+(rr?'！稀有宠物':qq?'！'+QN[qq]+'品质':''));
+  }
+  else if(a=='mg'){const i=S.mg.indexOf(+v);if(i>=0)S.mg.splice(i,1);else{S.mg.push(+v);if(S.mg.length>2)S.mg.shift()}}
+  else if(a=='fuse'){
+    if(S.mg.length<2)return toast('请选择两只宠物');
+    if(S.coins<100)return toast('金币不足');
+    const x=get(S.mg[0]),y=get(S.mg[1]);if(!x||!y||isExploring(x.id)||isExploring(y.id)||x.job||y.job)return toast('请先收回探险或派遣中的宠物');S.coins-=100;
+    const q=Math.max(x.q,y.q,1),n=mk(pick([x.sp,y.sp]),1,q);n.el=pick([x.el,y.el]);n.nat=pick([x.nat,y.nat]);n.ab=pick([x.ab,y.ab]);
+    n.ap=x.ap.map((v,i)=>Math.round((v+y.ap[i])/2*R(.98,1.08)));
+    n.g=+Math.min(1.5,(x.g+y.g)/2+R(0,.06)).toFixed(3);
+    const allowedWeak=WEAK_SP.includes(n.sp)?weakFor(n.el):null,pool=[...new Set([...x.sk,...y.sk].filter(k=>!BADSK.includes(k)||k===allowedWeak))];for(let i=pool.length-1;i>0;i--){const j=RI(0,i);[pool[i],pool[j]]=[pool[j],pool[i]]}
+    const sk=pool.filter(k=>Math.random()<(x.sk.includes(k)&&y.sk.includes(k)?.8:.5));
+    let resonance=false;
+    if(Math.random()<.3){const missing=pool.filter(k=>!sk.includes(k)),extra=Math.min(2,slots(n)-sk.length,missing.length);for(let i=0;i<extra;i++){sk.push(missing[i]);resonance=true}}
+    const inherited=Math.min(sk.length,slots(n));
+    if(sk.length<slots(n)&&Math.random()<.15){const fresh=SKN.filter(k=>!sk.includes(k));if(fresh.length)sk.push(pick(fresh))}
+    n.sk=sk.slice(0,slots(n));
+    S.pets=S.pets.filter(q=>q.id!==x.id&&q.id!==y.id);S.pets.push(n);dx(n);
+    S.team=S.team.filter(x=>get(x));if(!S.team.length)S.team=[n.id];S.active=S.team[0];S.sel=n.id;S.mg=[];qp('fuse');LAST=n;S.tab='pets';toast('炼化成功: '+n.n+'，继承'+inherited+'个技能'+(resonance?' · 技能共鸣！':''));
+  }
+  else if(a=='ad'){toast('广告播放中… (演示)');setTimeout(()=>{S.coins+=100;save();render();toast('奖励 +100🪙')},1500);return}
+  else if(a=='daily'){const d=new Date().toDateString();if(S.day===d)return toast('今天已领取');S.day=d;S.gems+=10;toast('+10💎')}
+  else if(a=='iap'){S.gems+=60;toast('演示：+60💎 (真实内购需接入支付SDK)')}
+  else if(a=='reset'){
+    if(!window.confirm('确定要重置存档吗？\n\n所有宠物、背包道具、金币、钻石和关卡进度都将清空，此操作无法撤销。\n\n点击“取消”保留存档。'))return;
+    try{localStorage.removeItem('petsaga2')}catch(e){toast('重置失败，存档未清空，请稍后重试');return}
+    location.reload();return;
+  }
+  save();render();
+}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(b)act(b.dataset.a,b.dataset.v)});
+load();initBag();S.xps=Array.isArray(S.xps)?S.xps:[null,null,null];while(S.xps.length<3)S.xps.push(null);if(S.xp&&!S.xps.some(Boolean))S.xps[0]=S.xp;S.xlogs=Array.isArray(S.xlogs)?S.xlogs:[[],[],[]];while(S.xlogs.length<3)S.xlogs.push([]);if(S.xlog?.length&&!S.xlogs[0]?.length)S.xlogs[0]=S.xlog;S.xsel??={z:0,d:0,ids:[]};S.xsel.car??=0;delete S.xp;delete S.xlog;
+S.pets.forEach(p=>{
+  p.el??=RI(0,4);p.xl??=[0,0,0];p.nd??=[];p.life??=100;p.job??=0;p.ev??=0;p.nat??=RI(0,5);p.ab??=RI(0,5);p.sk??=[];
+  const hadLegacy=p.sk.some(k=>OLD_BADSK.includes(k));p.sk=p.sk.filter(k=>!OLD_BADSK.includes(k));
+  if(WEAK_SP.includes(p.sp)){const weakness=weakFor(p.el);p.sk=p.sk.filter(k=>!BADSK.includes(k)||k===weakness);if(hadLegacy&&!p.sk.includes(weakness)&&p.sk.length<slots(p))p.sk.push(weakness)}
+  else p.sk=p.sk.filter(k=>!BADSK.includes(k));
+});checkOff();
+if(!S.pets.length){for(let i=0;i<3;i++)S.pets.push(mk((i*2+RI(0,1))%6,5,i?0:1));S.active=S.sel=S.pets[0].id;S.team=S.pets.map(x=>x.id)}
+if(!S.team||!S.team.length)S.team=[S.active];S.team=S.team.filter(x=>get(x));if(!S.team.length)S.team=[S.pets[0].id];S.active=S.team[0];
+dqRoll();S.pets.forEach(dx);if(!get(S.sel))S.sel=S.pets[0].id;if(S.mode!='main')S.farmOn=false;
+render();if(S.farmOn)scheduleFarm();
+document.addEventListener('visibilitychange',()=>{if(document.hidden){if(FARM_TIMER)clearTimeout(FARM_TIMER);stopAutoRun();S.last=Date.now();save()}else{checkOff();if(S.farmOn){if(B.run)autoRun();else scheduleFarm()}render()}});
+setInterval(()=>{if(!document.hidden&&!B.run){S.last=Date.now();save();if(S.tab=='idle')render()}},5000);
+</script>
+</body>
+</html>

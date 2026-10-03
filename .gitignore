@@ -1,0 +1,23 @@
+# Local settings and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Generated files and dependencies
+node_modules/
+dist/
+coverage/
+*.log
+
+# Editor and operating system files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Local working copies and temporary files
+work/
+*.bak
+*.tmp
