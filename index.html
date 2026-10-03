@@ -76,7 +76,7 @@ const fighter=p=>{const a=stats(p),mm=maxMana(p);return{p,a,hp:a.hp,mx:a.hp,mp:m
 const intent=f=>!f.boss?'':f.stun?'被定身：下次行动跳过':f.phase=='burst'?'⚠️ 下回合：蓄力群攻':f.phase=='charge'?'下回合：蓄力（不攻击）':'下回合：'+((f.sk||[]).includes('治疗')&&f.hp<f.mx*.5?'自我治疗':'普通攻击');
 const MEDICINE={h:'red',u:'blue'},RECOVERY={red:100,blue:30,heal:.3};
 const targetSide=c=>c=='a'?'enemy':MEDICINE[c]?'ally':CAST[c]?.target;
-const ITEMS={red:{n:'红药',e:'🔴',price:10,currency:'coins',desc:`战斗中固定恢复一名存活队友${RECOVERY.red}点气血，不超过上限，占用一次行动。`},blue:{n:'蓝药',e:'🔵',price:15,currency:'coins',desc:`战斗中固定恢复一名存活队友${RECOVERY.blue}点魔法，不超过上限，占用一次行动。`},exp:{n:'经验丹',e:'✨',price:100,currency:'coins',desc:'使用后全队战斗经验+100%，持续1小时；重复使用延长时间。'}};
+const ITEMS={red:{n:'红药',e:'🔴',price:15,currency:'coins',desc:`战斗中固定恢复一名存活队友${RECOVERY.red}点气血，不超过上限，占用一次行动。`},blue:{n:'蓝药',e:'🔵',price:25,currency:'coins',desc:`战斗中固定恢复一名存活队友${RECOVERY.blue}点魔法，不超过上限，占用一次行动。`},exp:{n:'经验丹',e:'✨',price:150,currency:'coins',desc:'使用后全队战斗经验+100%，持续1小时；重复使用延长时间。'}};
 const POTION_PARTS={redPart:{n:'红药碎片',e:'🟥',target:'red',need:5,rate:[.45,.75]},bluePart:{n:'蓝药碎片',e:'🟦',target:'blue',need:5,rate:[.35,.65]}};
 const LOOT=[{id:'red',n:'红药',e:'🔴',rate:[.25,.5],qty:[1,2]},{id:'blue',n:'蓝药',e:'🔵',rate:[.2,.4],qty:[1,2]},{id:'exp',n:'经验丹',e:'✨',rate:[.01,.04],qty:[1,1]},{id:'shard',n:'进化石碎片',e:'🧩',rate:[.05,.2],qty:[1,2]},{id:'stone',n:'进化石',e:'🪨',rate:[.002,.03],qty:[1,1]},...Object.entries(POTION_PARTS).map(([id,p])=>({id,n:p.n,e:p.e,rate:p.rate,qty:[1,3]}))];
 const BADSK=ELS.map(e=>'弱'+e),OLD_BADSK=['虚弱','迟钝','薄甲'],WEAK_SP=[0,1,5,8],weakFor=el=>'弱'+ELS[BEAT.indexOf(el)],SKN=Object.keys(SK).filter(k=>!BADSK.includes(k)),AN=['攻击','防御','体力','法力','速度'],TN=['体质','魔力','力量','耐力','敏捷'],QN=['野生','宝宝','变异'];
@@ -105,11 +105,12 @@ let OFF_AD=false,RETIRED_LIFE_REFUND=0;
 let BAG_ITEM=null,BAG_FILTER='all',PACK_RESULT=null,SHOP_CURRENCY='coins';
 let ROSTER_DRAG=null,ROSTER_NO_CLICK_UNTIL=0;
 let FUSION_RESULT_OPEN=false,WASH_CONFIRM=null;
-const WASH_ITEMS={dew:{n:'金柳露',e:'🧴',price:150,currency:'coins',desc:'洗炼野生／宝宝宠物；野生洗为宝宝。重随资质、成长与技能，保留等级和进化。'},mutDew:{n:'高级金柳露',e:'⚗️',price:15,currency:'gems',desc:'专用于变异宠物，保留变异身份。重随资质、成长与技能，保留等级和进化。'}};
+const WASH_ITEMS={dew:{n:'金柳露',e:'🧴',price:225,currency:'coins',desc:'洗炼野生／宝宝宠物；野生洗为宝宝。重随资质、成长与技能，保留等级和进化。'},mutDew:{n:'高级金柳露',e:'⚗️',price:15,currency:'gems',desc:'专用于变异宠物，保留变异身份。重随资质、成长与技能，保留等级和进化。'}};
 Object.assign(ITEMS,WASH_ITEMS);
+const COIN_SHOP_COST={stone:900,nat:300};
 const BAG_CATEGORIES=[['all','全部'],['medicine','补给'],['growth','养成'],['material','材料'],['book','技能书'],['pack','礼包']];
 const PACKS={
-  supplies:{n:'补给小礼包',e:'🎁',currency:'coins',price:50,rate:[.03,.08],desc:'固定获得红药×3、蓝药×2。金币商店购买，或战斗掉落。',items:{red:3,blue:2}},
+  supplies:{n:'补给小礼包',e:'🎁',currency:'coins',price:75,rate:[.03,.08],desc:'固定获得红药×3、蓝药×2。金币商店购买，或战斗掉落。',items:{red:3,blue:2}},
   growth:{n:'成长小礼包',e:'🎀',currency:'gems',price:25,rate:[0,.02],desc:'固定获得经验丹×3。钻石商店购买，或Boss掉落。',items:{exp:3}},
   books:{n:'技能书小礼包',e:'📦',rate:[0,.02],desc:'随机获得1本低级技能书，各本概率相同。仅Boss掉落，不能购买。'}
 };
@@ -447,7 +448,7 @@ function shopView(){
   const coins=SHOP_CURRENCY=='coins',currency=coins?'coins':'gems',symbol=coins?'🪙':'💎',pet=get(S.sel);
   const goods=Object.entries(ITEMS).filter(([,it])=>it.currency===currency).map(([id,it])=>{const qty=['red','blue'].includes(id)?3:1;return{n:it.n,e:it.e,desc:it.desc,price:it.price*qty,qty,action:'buyitem',value:id+','+qty,stock:itemCount(id)}});
   for(const [id,p] of Object.entries(PACKS)){if(p.currency===currency)goods.push({...p,qty:1,action:'buypack',value:id,stock:packCount(id)})}
-  if(coins)goods.push({n:'进化石',e:'🪨',desc:'用于宠物进化，购买后放入背包。',price:600,qty:1,action:'stone',stock:S.stone},{n:'性格药',e:'🧪',desc:'购买后立即重随 '+(pet?pet.n:'选中宠物')+' 的性格。',price:200,qty:1,action:'nat',needsPet:true});
+  if(coins)goods.push({n:'进化石',e:'🪨',desc:'用于宠物进化，购买后放入背包。',price:COIN_SHOP_COST.stone,qty:1,action:'stone',stock:S.stone},{n:'性格药',e:'🧪',desc:'购买后立即重随 '+(pet?pet.n:'选中宠物')+' 的性格。',price:COIN_SHOP_COST.nat,qty:1,action:'nat',needsPet:true});
   else goods.push({n:'特性胶囊',e:'💊',desc:'购买后立即重随 '+(pet?pet.n:'选中宠物')+' 的特性。',price:8,qty:1,action:'ab',needsPet:true});
   return`<div class="card"><div class="shop-tabs">${[['coins','🪙 金币商店'],['gems','💎 钻石商店']].map(([id,n])=>`<button class="b ${SHOP_CURRENCY===id?'':'alt'}" data-a="shopcurrency" data-v="${id}" aria-pressed="${SHOP_CURRENCY===id}">${n}</button>`).join('')}</div><div class="sub">余额 ${symbol}${S[currency]}${B.run?' · 战斗中暂停购买':''}</div></div>${coins?'':skinShopView()}<div class="card"><div class="bag-grid">${goods.map(g=>`<div class="bag-item shop-product"><h3>${g.e} ${g.n}</h3><div class="sub">${g.desc}${g.stock!==undefined?'<br>持有 '+g.stock:''}</div>${g.needsPet?shopPetPicker(g.action):''}<button class="b" data-a="${g.action}" ${g.value?`data-v="${g.value}"`:''} ${B.run||S[currency]<g.price||g.needsPet&&!pet?'disabled':''}>${g.needsPet?'购买并使用':'购买 ×'+g.qty} · ${g.price}${symbol}</button></div>`).join('')}</div></div><div class="card"><h3>${coins?'金币补充':'钻石补充'}</h3><div class="row">${coins?'<button class="b alt" data-a="ad" '+(B.run?'disabled':'')+'>看广告 +100🪙（模拟）</button>':'<button class="b alt" data-a="daily" '+(B.run?'disabled':'')+'>每日领取 +10💎</button><button class="b alt" data-a="iap" '+(B.run?'disabled':'')+'>60💎 · $0.99（演示，不扣费）</button>'}</div></div><details class="card"><summary>存档管理</summary><button class="b alt" style="margin-top:10px" data-a="reset" ${B.run?'disabled':''}>重置存档</button></details>`;
 }
@@ -951,7 +952,7 @@ function act(a,v){
     const m=EV_AP[p.ev-1];p.ap=p.ap.map(v=>Math.round(v*m));p.g=+(p.g+.05).toFixed(3);p.fp+=10;dx(p);toast('进化成功: '+p.n+'!');
   }
   else if(a=='reg'){const i=+v;if(S.maxStage<i*5+1)return toast('需先通关上一区域');S.farmOn=false;S.farmHold=false;if(FARM_TIMER)clearTimeout(FARM_TIMER);stopAutoRun();B={run:0};LOGL=[];S.stage=Math.max(i*5+1,Math.min(S.maxStage,i*5+5))}
-  else if(a=='nat'&&p){if(S.coins<200)return toast('金币不足');S.coins-=200;p.nat=RI(0,5);toast('性格变为 '+NAT[p.nat][0])}
+  else if(a=='nat'&&p){if(S.coins<COIN_SHOP_COST.nat)return toast('金币不足');S.coins-=COIN_SHOP_COST.nat;p.nat=RI(0,5);toast('性格变为 '+NAT[p.nat][0])}
   else if(a=='ab'&&p){if(S.gems<8)return toast('钻石不足');S.gems-=8;p.ab=RI(0,5);toast('特性变为 '+AB[p.ab][0])}
   else if(a=='xcar'){const i=+v;if(i>=carCap())return toast('还未解锁第'+(i+1)+'辆探险车');S.xsel.car=i;S.xsel.ids=[]}
   else if(a=='xz'){if(!S.ng&&S.maxStage<ZONES[+v].need)return toast('区域未解锁');S.xsel.z=+v}
@@ -963,7 +964,7 @@ function act(a,v){
   else if(a=='ng'){if(S.badges.length<6)return;S.farmOn=false;S.farmHold=false;if(FARM_TIMER)clearTimeout(FARM_TIMER);S.ng++;S.badges=[];S.maxStage=1;S.stage=1;B={run:0};LOGL=[];toast('第'+(S.ng+1)+'周目开始：敌人更强、技能更多!')}
   else if(a=='dq'){dqRoll();const i=+v,d=DQ[i];if((S.dq.p[d[1]]||0)<d[2]||S.dq.c.includes(i))return toast('任务未完成');S.dq.c.push(i);d[4]();toast('领取 '+d[3])}
   else if(a=='ac'){const i=+v,x=ACH[i];if(!x[2]()||S.ac.includes(i))return toast('尚未达成');S.ac.push(i);S.gems+=x[3];toast('成就达成 💎+'+x[3])}
-  else if(a=='stone'){if(S.coins<600)return toast('金币不足');S.coins-=600;S.stone++}
+  else if(a=='stone'){if(S.coins<COIN_SHOP_COST.stone)return toast('金币不足');S.coins-=COIN_SHOP_COST.stone;S.stone++}
   else if(a=='dxc'){const n=+v;if(dexScore()<n||S.dxc.includes(n))return;S.dxc.push(n);({10:()=>S.coins+=300,20:()=>S.gems+=10,30:()=>S.stone+=3,40:()=>S.gems+=30})[n]();toast('已领取图鉴奖励')}
   else if(a=='zone')S.zone=+v;
   else if(a=='cap'){
