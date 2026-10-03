@@ -64,6 +64,7 @@ button.b:disabled{opacity:.5}
 <div id="app">
   <div class="top"><div class="pill" id="coins"></div><div class="pill" id="gems"></div></div>
   <div id="exp-boost-status" class="card sub" role="status" hidden></div>
+  <div id="background-battle" class="card sub" hidden></div>
   <div class="tabs" id="tabs"></div>
   <div id="main"></div>
 </div>
@@ -130,6 +131,9 @@ function mk(sp,lv,q,z,id=S.nid++){
   return{id,sp,n:(q==2?'变异':'')+SP[sp].n,lv,exp:0,ap:SP[sp].b.map(v=>Math.round(v*R(lo,hi))),g:+R(gl,gh).toFixed(3),at:[10,10,10,10,10],fp:5*lv,sk,loy:100,q,el,xl:[0,0,0],nd:[],ev:0,nat:RI(0,5),ab:RI(0,5)};
 }
 const get=id=>S.pets.find(p=>p.id===id);
+const isBattlePet=p=>!!p&&!!(B.run&&B.T?.some(t=>t.p.id===p.id)||S.farmOn&&S.team.includes(p.id));
+const PET_BATTLE_LOCKS=['pt','ptconfirm','wash','evo','book','purge','nat','ab','rel','washprepare','washapply'];
+const SCENE_BATTLE_LOCKS=['st','reg','mode','ng','reset','teamslot','teamremove','act'];
 const slots=p=>(p.q==2?5:p.q?4:3)+(p.ev||0)+(Number.isFinite(p.fusionSlots)?Math.max(0,Math.floor(p.fusionSlots)):0);
 function stats0(p){
   const m=p.loy<60?.85:1,[c,g,s,e,a]=p.at,ap=p.ap,L=p.lv,G=p.g;
@@ -142,7 +146,7 @@ const EVN=[['应龙','龙神'],['玄龟','玄武'],['灵狸','神狸'],['猛虎'
 const defaultPetName=p=>(p.q==2?'变异':'')+(p.ev?EVN[p.sp][p.ev-1]:SP[p.sp].n);
 const validPetName=name=>typeof name=='string'&&[...name].length>=1&&[...name].length<=12&&/^[\p{L}\p{N}\p{M} ·_-]+$/u.test(name);
 const refreshPetName=p=>{p.n=p.nickname||defaultPetName(p)};
-function renameView(p){return`<details class="battle-help"><summary>✏️ 改名${p.nickname?' · 原名：'+defaultPetName(p):''}</summary><form id="pet-rename-form" data-pet-id="${p.id}" style="margin-top:10px"><label for="pet-name" class="sub">免费改名 · 1–12个字符，可用中文、字母、数字、空格、·、_、-</label><div class="row" style="margin-top:8px"><input id="pet-name" name="petName" type="text" value="${p.n}" required autocomplete="off" aria-label="宠物新名字" style="flex:1;min-width:120px;padding:10px;border:1px solid var(--line);border-radius:10px;font:inherit" ${B.run?'disabled':''}><button class="b" type="submit" ${B.run?'disabled':''}>确认改名</button>${p.nickname?`<button class="b alt" type="button" data-a="renamereset" ${B.run?'disabled':''}>恢复原名</button>`:''}</div><div class="sub" style="margin-top:6px">进化和洗炼保留名字；炼化生成的新宠使用种族名。</div></form></details>`}
+function renameView(p){return`<details class="battle-help"><summary>✏️ 改名${p.nickname?' · 原名：'+defaultPetName(p):''}</summary><form id="pet-rename-form" data-pet-id="${p.id}" style="margin-top:10px"><label for="pet-name" class="sub">免费改名 · 1–12个字符，可用中文、字母、数字、空格、·、_、-</label><div class="row" style="margin-top:8px"><input id="pet-name" name="petName" type="text" value="${p.n}" required autocomplete="off" aria-label="宠物新名字" style="flex:1;min-width:120px;padding:10px;border:1px solid var(--line);border-radius:10px;font:inherit" ><button class="b" type="submit" >确认改名</button>${p.nickname?`<button class="b alt" type="button" data-a="renamereset" >恢复原名</button>`:''}</div><div class="sub" style="margin-top:6px">进化和洗炼保留名字；炼化生成的新宠使用种族名。</div></form></details>`}
 const DEXM=[[10,'🪙300'],[20,'💎10'],[30,'进化石x3'],[40,'💎30']];
 const petPortrait=(p,skin='')=>`<span class="pet-sprite ${skin=='green'?'skin-green':''}" role="img" aria-label="${SP[p.sp].n}${skin=='green'?'，整成绿的皮肤':''}">${SP[p.sp].e}</span>`+(p.ev>1?'✨':'');
 const emo=p=>petPortrait(p,S.skins?.includes(p.skin)?p.skin:'');
@@ -350,7 +354,7 @@ function showPackNotice(name,count,rewards){
   PACK_NOTICE_TIMER=setTimeout(()=>{notice.hidden=true;notice.replaceChildren();PACK_NOTICE_TIMER=null},5000);
 }
 function openPack(id,requested){
-  if(B.run||!Object.hasOwn(PACKS,id)||![1,5].includes(requested))return;
+  if(!Object.hasOwn(PACKS,id)||![1,5].includes(requested))return;
   const count=Math.min(requested,packCount(id));if(!count)return toast('没有这个礼包');
   const pack=PACKS[id],rewards=[];
   if(pack.items){for(const [item,qty] of Object.entries(pack.items)){addItem(item,qty*count);rewards.push({id:item,qty:qty*count})}}
@@ -364,7 +368,7 @@ function bookUseView(p,expanded=false){
   return intro+['low','high'].map(grade=>{
     const books=owned.filter(k=>bookGrade(k)==grade);if(!books.length)return '';
     return`<div class="book-group"><div class="sub" style="margin-bottom:6px">${BOOK_GRADES[grade].name}技能书</div><div class="${expanded?'bag-grid':'row'}">${books.map(k=>{
-      const disabled=B.run||!p||p.sk.includes(k),button=`<button class="b alt" data-a="book" data-v="${k}" title="${bookLabel(k)}：${SK[k]}" ${disabled?'disabled':''}>${expanded?'使用':bookBadge(k)+' '+k+' ×'+bookCount(k)}${p?.sk.includes(k)?'（已学会）':''}</button>`;
+      const disabled=isBattlePet(p)||!p||p.sk.includes(k),button=`<button class="b alt" data-a="book" data-v="${k}" title="${bookLabel(k)}：${SK[k]}" ${disabled?'disabled':''}>${expanded?'使用':bookBadge(k)+' '+k+' ×'+bookCount(k)}${p?.sk.includes(k)?'（已学会）':''}</button>`;
       return expanded?`<div class="bag-item book-item ${grade}"><h3>📚 ${k}<span>×${bookCount(k)}</span></h3>${bookBadge(k)}<div class="sub" style="margin-top:6px">${SK[k]}</div><div class="row">${button}</div></div>`:button;
     }).join('')}</div></div>`;
   }).join('');
@@ -373,20 +377,20 @@ function bookSourceView(){
   return`<details class="sub battle-help"><summary>去哪刷技能书？</summary><div>普通战斗2%、Boss 12%概率掉一本。战斗中的高级书仅Boss掉落，比同一书池中的单本低级书更稀有；离线累计满12小时领取时也会送1本随机高级书。</div>${REG.map((r,i)=>`<div><b>${r.n}（${i*5+1}–${i*5+5}关）</b>：${REGION_BOOKS[i].map(bookLabel).join('、')}</div>`).join('')}<div>无尽塔普通层掉低级书，塔主可掉两级书；悬赏按本场敌人五行决定书种。Boss另有2%概率掉技能书小礼包，打开随机获得1本低级书。战斗页显示各项掉率。</div></details>`;
 }
 function cultivateView(){
-  const p=get(S.sel),locked=B.run?'disabled':'',free=p?Math.max(0,slots(p)-p.sk.length):0;
-  return`<div class="card"><h3>📚 宠物培养</h3><div class="sub">选择宠物，打书或洗炼。${B.run?'战斗中暂停培养；连续自动战斗可在战斗页停止。':''}</div><div class="row bag-picker">${S.pets.map(q=>`<button class="pc ${q.q==2?'gold':''} ${q.id===S.sel?'sel':''}" data-a="sel" data-v="${q.id}" aria-pressed="${q.id===S.sel}" ${locked}><b>${emo(q)}</b>${q.n}<br>Lv${q.lv} · ${QN[q.q]}</button>`).join('')}</div></div>
+  const p=get(S.sel),locked='',free=p?Math.max(0,slots(p)-p.sk.length):0;
+  return`<div class="card"><h3>📚 宠物培养</h3><div class="sub">选择宠物，打书或洗炼。${isBattlePet(p)?'当前宠物正在参战，请选择其他宠物培养。':''}</div><div class="row bag-picker">${S.pets.map(q=>`<button class="pc ${q.q==2?'gold':''} ${q.id===S.sel?'sel':''}" data-a="sel" data-v="${q.id}" aria-pressed="${q.id===S.sel}" ${locked}><b>${emo(q)}</b>${q.n}<br>Lv${q.lv} · ${QN[q.q]}</button>`).join('')}</div></div>
   ${p?`<div class="card"><h3>${emo(p)} ${p.n} · 技能 ${p.sk.length}/${slots(p)}</h3><div class="sub battle-help">${p.sk.map(k=>`<div><span class="tag ${BADSK.includes(k)?'bad':'g'}">${k}</span> ${SK[k]||'未知技能'}</div>`).join('')||'尚未学会技能'}</div><div class="${free?'sub':'intent'}" style="margin-top:10px">${free?'空余 '+free+' 格，学习新技能占用一格。':'⚠️ 技能栏已满：打书会随机覆盖一个已有技能，包括高级技能。'}</div></div>`:'<div class="card sub">请先选择一只宠物。</div>'}
   ${p?washView(p):''}<div class="card"><h3>可用技能书</h3>${bookUseView(p,true)}${bookSourceView()}</div>`;
 }
 const washItemFor=p=>p.q==2?'mutDew':'dew';
 const washSnapshot=p=>({id:p.id,n:p.n,q:p.q,ap:p.ap.slice(),g:p.g,sk:p.sk.slice()});
 function washView(p){
-  const id=washItemFor(p),it=ITEMS[id],busy=B.run||p.job||isExploring(p.id),pending=WASH_CONFIRM?.petId===p.id&&WASH_CONFIRM.item===id,r=S.washResult?.after?.id===p.id?S.washResult:null;
+  const id=washItemFor(p),it=ITEMS[id],busy=isBattlePet(p)||p.job||isExploring(p.id),pending=WASH_CONFIRM?.petId===p.id&&WASH_CONFIRM.item===id,r=S.washResult?.after?.id===p.id?S.washResult:null;
   const signed=n=>(n>0?'+':'')+n;
   return`<div class="card"><h3>🧴 洗炼 · ${it.n}</h3><div class="sub battle-help">${it.desc}<br>每次消耗1瓶，持有 ${itemCount(id)} 瓶。${p.q==2?'变异资质范围保留。':'不会洗出变异，变异需通过捕捉或炼化获得。'}<br>等级、经验、加点、五行、性格、特性、皮肤和进化形态保留。资质与成长可能变好或变差；所有现有技能（包括打书和炼化技能）重新生成，技能数为${p.q==2?'3–5':'2–4'}个，有机会包含符合五行的弱点。</div>${busy?'<div class="intent">战斗、派遣或探险中的宠物暂不可洗炼。</div>':''}${pending?`<div class="intent" style="margin-top:10px">确认洗炼 ${p.n}？现有技能：${p.sk.join('、')||'无'}。确认后立即消耗1瓶${it.n}并替换资质、成长、技能，无法撤回。</div><div class="row" style="margin-top:10px"><button class="b" data-a="washapply" data-v="${id}" ${busy||!itemCount(id)?'disabled':''}>确认消耗1瓶并洗炼</button><button class="b alt" data-a="washcancel">取消</button></div>`:`<div class="row" style="margin-top:10px"><button class="b" data-a="washprepare" data-v="${id}" ${busy||!itemCount(id)?'disabled':''}>洗炼 · ${it.n} ×1</button>${!itemCount(id)?`<button class="b alt" data-a="washshop" data-v="${id}">去${it.currency=='coins'?'金币':'钻石'}商店购买</button>`:''}</div>`}${r?`<details open style="margin-top:14px"><summary>上次洗炼结果 · ${r.after.n}</summary><div class="sub battle-help">${QN[r.before.q]} → ${QN[r.after.q]} · 技能 ${r.before.sk.length} → ${r.after.sk.length} 个</div><table class="fusion-table"><thead><tr><th>属性</th><th>之前</th><th>之后</th><th>变化</th></tr></thead><tbody>${r.after.ap.map((v,i)=>`<tr><td>${AN[i]}资质</td><td>${r.before.ap[i]}</td><td>${v}</td><td>${signed(v-r.before.ap[i])}</td></tr>`).join('')}<tr><td>成长率</td><td>${r.before.g.toFixed(3)}</td><td>${r.after.g.toFixed(3)}</td><td>${signed(+(r.after.g-r.before.g).toFixed(3))}</td></tr></tbody></table><div class="sub battle-help">原技能：${r.before.sk.join('、')||'无'}<br>新技能：${r.after.sk.join('、')||'无'}<br>结果已生效；此处保留上次洗炼记录。</div></details>`:''}</div>`;
 }
 function washPet(id,p){
-  if(!p||B.run||!Object.hasOwn(WASH_ITEMS,id)||id!==washItemFor(p))return;
+  if(!p||isBattlePet(p)||!Object.hasOwn(WASH_ITEMS,id)||id!==washItemFor(p))return;
   if(!WASH_CONFIRM||WASH_CONFIRM.petId!==p.id||WASH_CONFIRM.item!==id)return;
   WASH_CONFIRM=null;
   if(p.job||isExploring(p.id))return toast('请先收回派遣或探险中的宠物');
@@ -401,7 +405,7 @@ function washPet(id,p){
 }
 function addItem(id,n){if((Object.hasOwn(ITEMS,id)||Object.hasOwn(POTION_PARTS,id))&&Number.isInteger(n)&&n>0)S.bag[id]=itemCount(id)+n}
 function craftPotion(id,mode){
-  if(B.run||!Object.hasOwn(POTION_PARTS,id)||!['one','all'].includes(mode))return;
+  if(!Object.hasOwn(POTION_PARTS,id)||!['one','all'].includes(mode))return;
   const part=POTION_PARTS[id],available=Math.floor(itemCount(id)/part.need);
   if(available<1)return toast('需要'+part.need+'个'+part.n);
   const count=mode=='all'?available:1;
@@ -414,7 +418,7 @@ function buyItem(id,n){
   S[item.currency]-=cost;addItem(id,n);toast(item.n+' ×'+n+' 已放入背包');
 }
 function useGrowthItem(id){
-  if(B.run||id!=='exp')return;
+  if(id!=='exp')return;
   if(!itemCount(id))return toast('背包里没有'+ITEMS[id].n);
   S.bag[id]--;
   S.expBoostUntil=Math.max(Date.now(),S.expBoostUntil||0)+3600000;toast('战斗经验 +100%，有效时间增加1小时');
@@ -441,13 +445,13 @@ function bagView(){
 }
 function bagDetailView(it){
   const pet=get(S.sel);let action='';
-  if(it.id=='exp')action=`<div class="sub battle-help">全队生效，主线、无尽塔、悬赏战斗均有效。重复使用延长时间，倍率保持+100%；按胜利结算时是否生效计算。离线期间继续计时，离线收益不加成。</div><button class="b" style="margin-top:10px" data-a="useitem" data-v="exp" ${B.run?'disabled':''}>${expBoostMultiplier()==2?'使用1颗 · 延长1小时':'使用1颗 · 开启1小时'}</button>${B.run?'<div class="sub">战斗结束后可使用。</div>':''}`;
+  if(it.id=='exp')action=`<div class="sub battle-help">全队生效，主线、无尽塔、悬赏战斗均有效。重复使用延长时间，倍率保持+100%；按胜利结算时是否生效计算。离线期间继续计时，离线收益不加成。</div><button class="b" style="margin-top:10px" data-a="useitem" data-v="exp" >${expBoostMultiplier()==2?'使用1颗 · 延长1小时':'使用1颗 · 开启1小时'}</button>`;
   else if(Object.hasOwn(WASH_ITEMS,it.id))action='<button class="b" style="margin-top:10px" data-a="tab" data-v="cultivate">前往宠物培养 · 洗炼</button>';
-  else if(it.kind=='growth')action=`<div class="sub" style="margin-top:10px">使用对象：${pet?pet.n+' · Lv'+pet.lv:'请选择宠物'}${B.run?' · 战斗中暂不可使用':''}</div><div class="row bag-picker">${S.pets.map(p=>`<button class="pc ${p.id===S.sel?'sel':''}" data-a="sel" data-v="${p.id}" ${B.run?'disabled':''}>${emo(p)} ${p.n}<br>Lv${p.lv}</button>`).join('')}</div><button class="b" style="margin-top:10px" data-a="useitem" data-v="${it.id}" ${B.run||!pet?'disabled':''}>使用1颗</button>`;
-  else if(it.kind=='pack')action=`${it.packId=='books'?`<details class="sub battle-help"><summary>可能获得的技能书</summary>${SKN.filter(k=>bookGrade(k)=='low').join('、')}<br>每本概率 1/${SKN.filter(k=>bookGrade(k)=='low').length}。</details>`:''}<div class="row" style="margin-top:10px"><button class="b" data-a="openpack" data-v="${it.packId},1" ${B.run?'disabled':''}>打开1个</button>${it.qty>1?`<button class="b alt" data-a="openpack" data-v="${it.packId},5" ${B.run?'disabled':''}>打开${Math.min(5,it.qty)}个</button>`:''}</div>${B.run?'<div class="sub">战斗结束后可打开礼包。</div>':''}`;
+  else if(it.kind=='growth')action=`<div class="sub" style="margin-top:10px">使用对象：${pet?pet.n+' · Lv'+pet.lv:'请选择宠物'}${isBattlePet(pet)?' · 当前宠物正在参战':''}</div><div class="row bag-picker">${S.pets.map(p=>`<button class="pc ${p.id===S.sel?'sel':''}" data-a="sel" data-v="${p.id}" >${emo(p)} ${p.n}<br>Lv${p.lv}</button>`).join('')}</div><button class="b" style="margin-top:10px" data-a="useitem" data-v="${it.id}" ${isBattlePet(pet)||!pet?'disabled':''}>使用1颗</button>`;
+  else if(it.kind=='pack')action=`${it.packId=='books'?`<details class="sub battle-help"><summary>可能获得的技能书</summary>${SKN.filter(k=>bookGrade(k)=='low').join('、')}<br>每本概率 1/${SKN.filter(k=>bookGrade(k)=='low').length}。</details>`:''}<div class="row" style="margin-top:10px"><button class="b" data-a="openpack" data-v="${it.packId},1" >打开1个</button>${it.qty>1?`<button class="b alt" data-a="openpack" data-v="${it.packId},5" >打开${Math.min(5,it.qty)}个</button>`:''}</div>`;
   else if(Object.hasOwn(POTION_PARTS,it.id)){
     const part=POTION_PARTS[it.id],count=Math.floor(it.qty/part.need),remainder=it.qty%part.need;
-    action=`<div class="sub battle-help">${count?'可合成 '+count+' 瓶，全部合成后剩余 '+remainder+' 个碎片。':'还差 '+(part.need-it.qty)+' 个碎片。'}${B.run?'<br>战斗结束后可合成。':''}</div><div class="row" style="margin-top:10px"><button class="b" data-a="craftpotion" data-v="${it.id},one" ${B.run||!count?'disabled':''}>合成1瓶</button><button class="b alt" data-a="craftpotion" data-v="${it.id},all" ${B.run||!count?'disabled':''}>全部合成${count?' · '+count+'瓶':''}</button></div>`;
+    action=`<div class="sub battle-help">${count?'可合成 '+count+' 瓶，全部合成后剩余 '+remainder+' 个碎片。':'还差 '+(part.need-it.qty)+' 个碎片。'}</div><div class="row" style="margin-top:10px"><button class="b" data-a="craftpotion" data-v="${it.id},one" ${!count?'disabled':''}>合成1瓶</button><button class="b alt" data-a="craftpotion" data-v="${it.id},all" ${!count?'disabled':''}>全部合成${count?' · '+count+'瓶':''}</button></div>`;
   }
   else if(it.kind=='medicine')action='<div class="sub battle-help">在战斗页使用和调整自动用药；金币商店可购买，也可用同类碎片合成。</div>';
   else if(it.kind=='book')action='<div class="sub battle-help">在宠物培养页打书。</div>';
@@ -455,10 +459,10 @@ function bagDetailView(it){
 }
 function skinShopView(){
   const skin=SKINS.green,pet=get(S.sel),owned=S.skins.includes('green'),wearing=owned&&pet?.skin=='green';
-  return`<div class="card"><h3>🎨 宠物皮肤 · ${skin.n} ${owned?'<span class="tag">已解锁</span>':''}</h3><p class="skin-copy">“${skin.desc}”</p><div class="sub">一次解锁，全宠通用，可给多只宠物穿戴。纯外观，属性、五行和变异品质保持原样。</div><div class="row bag-picker">${S.pets.map(p=>`<button class="pc ${p.id===S.sel?'sel':''}" data-a="sel" data-v="${p.id}" aria-pressed="${p.id===S.sel}" ${B.run?'disabled':''}>${emo(p)} ${p.n}</button>`).join('')}</div>${pet?`<div class="skin-preview"><div>${petPortrait(pet)}<small>原色</small></div><span aria-hidden="true">→</span><div>${petPortrait(pet,'green')}<small>整成绿的</small></div></div><div class="sub" style="margin-bottom:10px">换装对象：${pet.n}${wearing?' · 已穿戴':''}</div>`:''}<div class="row">${owned?`<button class="b" data-a="skinequip" data-v="green" ${B.run||!pet||wearing?'disabled':''}>${wearing?'已穿戴':'穿上皮肤'}</button><button class="b alt" data-a="skinequip" data-v="original" ${B.run||!pet||!pet.skin?'disabled':''}>恢复原色</button>`:`<button class="b" data-a="skinbuy" data-v="green" ${B.run||!pet||S.gems<skin.price?'disabled':''}>解锁并穿上 · ${skin.price}💎</button>${S.gems<skin.price?'<span class="sub">钻石不足</span>':''}`}</div><div class="sub battle-help">解锁记录随当前浏览器存档保存；已解锁后换装免费。</div></div>`;
+  return`<div class="card"><h3>🎨 宠物皮肤 · ${skin.n} ${owned?'<span class="tag">已解锁</span>':''}</h3><p class="skin-copy">“${skin.desc}”</p><div class="sub">一次解锁，全宠通用，可给多只宠物穿戴。纯外观，属性、五行和变异品质保持原样。</div><div class="row bag-picker">${S.pets.map(p=>`<button class="pc ${p.id===S.sel?'sel':''}" data-a="sel" data-v="${p.id}" aria-pressed="${p.id===S.sel}" >${emo(p)} ${p.n}</button>`).join('')}</div>${pet?`<div class="skin-preview"><div>${petPortrait(pet)}<small>原色</small></div><span aria-hidden="true">→</span><div>${petPortrait(pet,'green')}<small>整成绿的</small></div></div><div class="sub" style="margin-bottom:10px">换装对象：${pet.n}${wearing?' · 已穿戴':''}</div>`:''}<div class="row">${owned?`<button class="b" data-a="skinequip" data-v="green" ${!pet||wearing?'disabled':''}>${wearing?'已穿戴':'穿上皮肤'}</button><button class="b alt" data-a="skinequip" data-v="original" ${!pet||!pet.skin?'disabled':''}>恢复原色</button>`:`<button class="b" data-a="skinbuy" data-v="green" ${!pet||S.gems<skin.price?'disabled':''}>解锁并穿上 · ${skin.price}💎</button>${S.gems<skin.price?'<span class="sub">钻石不足</span>':''}`}</div><div class="sub battle-help">解锁记录随当前浏览器存档保存；已解锁后换装免费。</div></div>`;
 }
 function shopPetPicker(action){
-  return`<div><div class="sub">选择使用对象</div><div class="row bag-picker">${S.pets.map(p=>`<button class="pc ${p.id===S.sel?'sel':''}" data-a="sel" data-v="${p.id}" aria-pressed="${p.id===S.sel}" ${B.run?'disabled':''}>${emo(p)} ${p.n}<br>${action=='nat'?NAT[p.nat][0]:AB[p.ab][0]}</button>`).join('')}</div></div>`;
+  return`<div><div class="sub">选择使用对象${isBattlePet(get(S.sel))?' · 当前宠物参战中，请选择其他宠物':''}</div><div class="row bag-picker">${S.pets.map(p=>`<button class="pc ${p.id===S.sel?'sel':''}" data-a="sel" data-v="${p.id}" aria-pressed="${p.id===S.sel}" >${emo(p)} ${p.n}<br>${action=='nat'?NAT[p.nat][0]:AB[p.ab][0]}</button>`).join('')}</div></div>`;
 }
 function shopView(){
   const coins=SHOP_CURRENCY=='coins',currency=coins?'coins':'gems',symbol=coins?'🪙':'💎',pet=get(S.sel);
@@ -466,10 +470,10 @@ function shopView(){
   for(const [id,p] of Object.entries(PACKS)){if(p.currency===currency)goods.push({...p,qty:1,action:'buypack',value:id,stock:packCount(id)})}
   if(coins)goods.push({n:'进化石',e:'🪨',desc:'用于宠物进化，购买后放入背包。',price:COIN_SHOP_COST.stone,qty:1,action:'stone',stock:S.stone},{n:'性格药',e:'🧪',desc:'购买后立即重随 '+(pet?pet.n:'选中宠物')+' 的性格。',price:COIN_SHOP_COST.nat,qty:1,action:'nat',needsPet:true});
   else goods.push({n:'特性胶囊',e:'💊',desc:'购买后立即重随 '+(pet?pet.n:'选中宠物')+' 的特性。',price:8,qty:1,action:'ab',needsPet:true});
-  return`<div class="card"><div class="shop-tabs">${[['coins','🪙 金币商店'],['gems','💎 钻石商店']].map(([id,n])=>`<button class="b ${SHOP_CURRENCY===id?'':'alt'}" data-a="shopcurrency" data-v="${id}" aria-pressed="${SHOP_CURRENCY===id}">${n}</button>`).join('')}</div><div class="sub">余额 ${symbol}${S[currency]}${B.run?' · 战斗中暂停购买':''}</div></div>${coins?'':skinShopView()}<div class="card"><div class="bag-grid">${goods.map(g=>`<div class="bag-item shop-product"><h3>${g.e} ${g.n}</h3><div class="sub">${g.desc}${g.stock!==undefined?'<br>持有 '+g.stock:''}</div>${g.needsPet?shopPetPicker(g.action):''}<button class="b" data-a="${g.action}" ${g.value?`data-v="${g.value}"`:''} ${B.run||S[currency]<g.price||g.needsPet&&!pet?'disabled':''}>${g.needsPet?'购买并使用':'购买 ×'+g.qty} · ${g.price}${symbol}</button></div>`).join('')}</div></div><div class="card"><h3>${coins?'金币补充':'钻石补充'}</h3><div class="row">${coins?'<button class="b alt" data-a="ad" '+(B.run?'disabled':'')+'>看广告 +100🪙（模拟）</button>':'<button class="b alt" data-a="daily" '+(B.run?'disabled':'')+'>每日领取 +10💎</button><button class="b alt" data-a="iap" '+(B.run?'disabled':'')+'>60💎 · $0.99（演示，不扣费）</button>'}</div></div><details class="card"><summary>存档管理</summary><button class="b alt" style="margin-top:10px" data-a="reset" ${B.run?'disabled':''}>重置存档</button></details>`;
+  return`<div class="card"><div class="shop-tabs">${[['coins','🪙 金币商店'],['gems','💎 钻石商店']].map(([id,n])=>`<button class="b ${SHOP_CURRENCY===id?'':'alt'}" data-a="shopcurrency" data-v="${id}" aria-pressed="${SHOP_CURRENCY===id}">${n}</button>`).join('')}</div><div class="sub">余额 ${symbol}${S[currency]}</div></div>${coins?'':skinShopView()}<div class="card"><div class="bag-grid">${goods.map(g=>`<div class="bag-item shop-product"><h3>${g.e} ${g.n}</h3><div class="sub">${g.desc}${g.stock!==undefined?'<br>持有 '+g.stock:''}</div>${g.needsPet?shopPetPicker(g.action):''}<button class="b" data-a="${g.action}" ${g.value?`data-v="${g.value}"`:''} ${S[currency]<g.price||g.needsPet&&(!pet||isBattlePet(pet))?'disabled':''}>${g.needsPet?'购买并使用':'购买 ×'+g.qty} · ${g.price}${symbol}</button></div>`).join('')}</div></div><div class="card"><h3>${coins?'金币补充':'钻石补充'}</h3><div class="row">${coins?'<button class="b alt" data-a="ad" >看广告 +100🪙（模拟）</button>':'<button class="b alt" data-a="daily" >每日领取 +10💎</button><button class="b alt" data-a="iap" >60💎 · $0.99（演示，不扣费）</button>'}</div></div><details class="card"><summary>存档管理</summary><button class="b alt" style="margin-top:10px" data-a="reset" ${B.run?'disabled':''}>重置存档</button></details>`;
 }
 function card(p,extra){return`<button class="pc ${p.q==2?'gold':''} ${S.sel===p.id?'sel':''}" data-a="${extra||'sel'}" data-v="${p.id}"><b>${emo(p)}</b>${p.n}<br>Lv${p.lv}${p.ev?' ★'+p.ev:''}${S.team.includes(p.id)?' ⭐':''}${p.job?' ⏳':''}${p.q?' <span class="tag">'+QN[p.q]+'</span>':''}${isGatherer(p)?' ⛏':''}</button>`}
-function fusionQuickOption(){return`<label class="fusion-option"><input type="checkbox" data-setting="fuseQuick" ${S.fuseQuick===true?'checked':''} ${B.run?'disabled':''}>跳过结果展示，快速炼化</label><div class="sub" style="margin-top:4px">仅跳过结果展示；每次仍需选择两只宠物并点击炼化。</div>`}
+function fusionQuickOption(){return`<label class="fusion-option"><input type="checkbox" data-setting="fuseQuick" ${S.fuseQuick===true?'checked':''} >跳过结果展示，快速炼化</label><div class="sub" style="margin-top:4px">仅跳过结果展示；每次仍需选择两只宠物并点击炼化。</div>`}
 function fusionResultView(r){
   const p=r.pet,[x,y]=r.parents,base=x.ap.map((v,i)=>(v+y.ap[i])/2),avgG=(x.g+y.g)/2;
   const aptitudeChange=(p.ap.reduce((a,b)=>a+b,0)/base.reduce((a,b)=>a+b,0)-1)*100,skillChange=p.sk.length-Math.max(x.sk.length,y.sk.length),growthChange=p.g-avgG;
@@ -479,10 +483,10 @@ function fusionResultView(r){
 }
 function fusionView(){
   const result=S.fusionResult,show=!!result&&FUSION_RESULT_OPEN;
-  return`${show?fusionResultView(result):result?`<div class="card"><b>上次炼化：${result.pet.n}</b><div class="sub" style="margin:6px 0">${QN[result.pet.q]} · ${result.pet.sk.length} 个技能${result.resonance?' · 技能共鸣':''}</div><button class="b alt" data-a="fuseresultopen">查看结果评价</button></div>`:''}<div class="card"><h3>🔮 炼化 · 100🪙</h3><details class="sub battle-help"><summary>炼化规则</summary><div>选择两只宠物，消耗它们炼出一只新宠物：资质取平均并有机会提升，最低为宝宝品质，从 Lv1 基础形态开始。父母独有技能各有50%概率继承，共有技能为80%；另有30%概率触发技能共鸣，额外继承最多2个未继承的技能。所有技能（包括任意五行弱点）均可继承，不受宠物种类或自身五行限制。同名技能合并为一个；有机会保留父母全部不同技能，超过基础技能格时自动增加技能格并保存。</div></details><div class="sub" style="margin:10px 0">已选择 ${S.mg.length}/2 · 炼化会消耗所选两只宠物</div><div class="row">${S.pets.map(q=>`<button class="pc ${S.mg.includes(q.id)?'sel':''}" data-a="mg" data-v="${q.id}" ${B.run?'disabled':''}><b>${emo(q)}</b>${q.n}<br>Lv${q.lv} · 技能${q.sk.length}</button>`).join('')}</div>${show?'':fusionQuickOption()}<button class="b" style="margin-top:12px" data-a="fuse" ${B.run||S.mg.length!==2||S.coins<100?'disabled':''}>${S.fuseQuick===true?'快速炼化':'炼化'} · 100🪙</button></div>`;
+  return`${show?fusionResultView(result):result?`<div class="card"><b>上次炼化：${result.pet.n}</b><div class="sub" style="margin:6px 0">${QN[result.pet.q]} · ${result.pet.sk.length} 个技能${result.resonance?' · 技能共鸣':''}</div><button class="b alt" data-a="fuseresultopen">查看结果评价</button></div>`:''}<div class="card"><h3>🔮 炼化 · 100🪙</h3><details class="sub battle-help"><summary>炼化规则</summary><div>选择两只宠物，消耗它们炼出一只新宠物：资质取平均并有机会提升，最低为宝宝品质，从 Lv1 基础形态开始。父母独有技能各有50%概率继承，共有技能为80%；另有30%概率触发技能共鸣，额外继承最多2个未继承的技能。所有技能（包括任意五行弱点）均可继承，不受宠物种类或自身五行限制。同名技能合并为一个；有机会保留父母全部不同技能，超过基础技能格时自动增加技能格并保存。</div></details><div class="sub" style="margin:10px 0">已选择 ${S.mg.length}/2 · 炼化会消耗所选两只宠物</div><div class="row">${S.pets.map(q=>`<button class="pc ${S.mg.includes(q.id)?'sel':''}" data-a="mg" data-v="${q.id}" ${isBattlePet(q)&&!S.mg.includes(q.id)?'disabled':''}><b>${emo(q)}</b>${q.n}<br>Lv${q.lv} · 技能${q.sk.length}</button>`).join('')}</div>${show?'':fusionQuickOption()}<button class="b" style="margin-top:12px" data-a="fuse" ${S.mg.some(id=>isBattlePet(get(id)))||S.mg.length!==2||S.coins<100?'disabled':''}>${S.fuseQuick===true?'快速炼化':'炼化'} · 100🪙</button></div>`;
 }
 document.addEventListener('change',e=>{
-  if(e.target.matches('input[data-setting="fuseQuick"]')&&!B.run){S.fuseQuick=e.target.checked;if(S.fuseQuick)FUSION_RESULT_OPEN=false;save();render()}
+  if(e.target.matches('input[data-setting="fuseQuick"]')){S.fuseQuick=e.target.checked;if(S.fuseQuick)FUSION_RESULT_OPEN=false;save();render()}
 });
 function syncFormation(){
   const team=[...new Set(S.team||[])].filter(id=>get(id)).slice(0,3),seen=new Set();
@@ -563,6 +567,7 @@ function detail(p){
   return`<div class="card"><h3>${emo(p)} ${p.n} · Lv${p.lv} <span class="tag ${p.q==2?'g':''}">${QN[p.q]}</span></h3>
   ${p.sp===6?'<div class="sub" style="margin:0 0 10px">「这倒是提醒我了」</div>':''}
   ${renameView(p)}
+  ${isBattlePet(p)?'<div class="sub battle-help">当前宠物正在参战，暂不能加点、打书、洗炼或放生；可以改名、换装，或选择其他宠物培养。</div>':''}
   <div class="sub">${isGatherer(p)?`⛏ 采集型：探险采矿金币+${p.q==2?40:25}%<br>`:''}五行 ${ELC[p.el]}${ELS[p.el]} · 经验 ${p.exp}/${Math.round(p.lv*p.lv*1.65)} · 成长率 ${p.g} · 忠诚 ${p.loy}<br>性格 ${NAT[p.nat][0]}（${NAT[p.nat][3]}）· 特性 ${AB[p.ab][0]}：${AB[p.ab][1]}${p.loy<60?' ⚠️属性-15%':''}</div>
   ${aptitudeView(p)}
   <div class="grid2" style="margin-bottom:8px"><span>气血 <b>${s.hp}</b></span><span>攻击 <b>${s.atk}</b></span><span>防御 <b>${s.def}</b></span><span>法攻 <b>${s.mag}</b></span><span>速度 <b>${s.spd}</b></span><span>可用点数 <b>${left}</b></span></div>
@@ -631,6 +636,34 @@ function render(){
   $('coins').textContent='🪙 '+S.coins;$('gems').textContent='💎 '+S.gems;
   $('tabs').innerHTML=TABS.map(t=>{const main=t[0]=='pets'||t[0]=='bag',home=t[0]=='pets';return`<button class="${main?'nav-main ':''}${S.tab===t[0]?'on':''}" data-a="tab" data-v="${t[0]}" ${S.tab===t[0]?'aria-current="page"':''}>${main?`<span class="nav-icon" aria-hidden="true">${home?'🏠':'🎒'}</span><span><strong>${home?'首页':'背包'}</strong><small>${home?'宠物与队伍':'道具与技能书'}</small></span>`:t[1]}${(t[0]=='idle'&&S.off)||(t[0]=='quest'&&claimable())?'🔴':''}</button>`}).join('');
   $('main').innerHTML=view();
+  updateBattleStatus();
+  const lockedPet=isBattlePet(get(S.sel));
+  $('main').querySelectorAll('button[data-a]').forEach(button=>{if(lockedPet&&PET_BATTLE_LOCKS.includes(button.dataset.a)||B.run&&SCENE_BATTLE_LOCKS.includes(button.dataset.a))button.disabled=true});
+}
+function updateBattleStatus(){
+  $('coins').textContent='🪙 '+S.coins;$('gems').textContent='💎 '+S.gems;updateExpBoostStatus();
+  const bar=$('background-battle');bar.hidden=S.tab=='fight'||!(B.run||S.farmOn);
+  if(!bar.hidden)bar.innerHTML=`<div>⚔️ ${B.run?(B.auto?'自动战斗':'战斗进行中')+' · 第 '+(B.r||1)+' 回合':'连续自动 · 准备下一场'}<br>可以继续购物、捕捉、开礼包和培养未参战宠物。</div><div class="row" style="margin-top:8px"><button class="b alt" data-a="tab" data-v="fight">返回战斗</button>${B.auto||S.farmOn?`<button class="b alt" data-a="stopbackground" ${B.stopAfterBattle?'disabled':''}>${B.stopAfterBattle?'本场结束后停止':'停止连续自动'}</button>`:''}</div>`;
+  if(S.tab=='shop')$('main').querySelectorAll('button[data-a]').forEach(button=>{
+    const action=button.dataset.a,p=get(S.sel);let price,currency='coins';
+    if(action=='buyitem'){const [id,qty]=button.dataset.v.split(',');price=ITEMS[id].price*Number(qty);currency=ITEMS[id].currency}
+    else if(action=='buypack'){const pack=PACKS[button.dataset.v];price=pack.price;currency=pack.currency}
+    else if(action=='stone'||action=='nat')price=COIN_SHOP_COST[action];
+    else if(action=='ab'){price=8;currency='gems'}
+    else return;
+    button.disabled=S[currency]<price||['nat','ab'].includes(action)&&(!p||isBattlePet(p));
+  });
+}
+function renderBattleUpdate(){
+  if(S.tab=='fight'){render();return}
+  if(!B.run&&!S.farmOn){
+    const focused=document.activeElement,editing=focused?.id==='pet-name',name=editing?focused.value:null,start=editing?focused.selectionStart:0,end=editing?focused.selectionEnd:0,scroll=window.scrollY;
+    const details=[...$('main').querySelectorAll('details')].map(node=>node.open);
+    render();$('main').querySelectorAll('details').forEach((node,i)=>{if(i<details.length)node.open=details[i]});
+    if(editing&&$('pet-name')){const input=$('pet-name');input.value=name;input.focus({preventScroll:true});input.setSelectionRange(start,end)}
+    window.scrollTo(0,scroll);return;
+  }
+  updateBattleStatus();
 }
 function addPet(p){if(S.pets.length>=PET_CAP){toast('宠物栏已满，请先放生');return false}S.pets.push(p);dx(p);return true}
 const alive=a=>a.filter(x=>x.hp>0),nxt=i=>{for(;i<B.T.length;i++)if(B.T[i].hp>0)return i;return -1};
@@ -646,7 +679,7 @@ function stopAutoRun(){if(AUTO_TIMER){clearInterval(AUTO_TIMER);AUTO_TIMER=null}
 function scheduleFarm(){
   if(FARM_TIMER)clearTimeout(FARM_TIMER);
   if(!S.farmOn||S.mode!='main'||B.run||document.hidden)return;
-  FARM_TIMER=setTimeout(()=>{FARM_TIMER=null;if(!S.farmOn||S.mode!='main'||B.run||document.hidden)return;bstart();if(B.run){autoRun();render()}else{S.farmOn=false;save();render()}},Math.max(700,2200/S.battleSpeed));
+  FARM_TIMER=setTimeout(()=>{FARM_TIMER=null;if(!S.farmOn||S.mode!='main'||B.run||document.hidden)return;bstart();if(B.run){autoRun();renderBattleUpdate()}else{S.farmOn=false;save();render()}},Math.max(700,2200/S.battleSpeed));
 }
 const availableBattlePets=()=>S.team.map(get).filter(p=>p&&!p.job&&!isExploring(p.id));
 function canStartBattle(){
@@ -662,7 +695,7 @@ function bstart(){
   B={run:1,tw:S.mode=='tower',hunt:S.mode=='hunt',r:0,auto:0,pi:0,pend:null,T:ps.map(fighter),F:curFoes()};
   LOGL=['遭遇 '+B.F.map(f=>f.n).join('、')+'！'];
   if(B.F.some(f=>f.boss))LOGL.push('首领规律：普攻／治疗 → 蓄力 → 群攻；定身可打断已蓄力的群攻。');
-  render();
+  renderBattleUpdate();
 }
 const canCast=(t,c)=>!!CAST[c]&&t.p.sk.includes(CAST[c].skill)&&t.mp>=CAST[c].cost;
 function autoPick(t){
@@ -851,20 +884,20 @@ function playBattleStep(){
     if(playback.index>=playback.acts.length||!alive(B.F).length||!alive(B.T).length){finishBattleRound();return}
     const action=playback.acts[playback.index],unit=action.t||action.f;
     B.fx={actor:unit,title:(action.t?unit.p.n:unit.n)+' · '+actionLabel(action),lines:['准备出手…'],changes:[],special:actionLabel(action)=='蓄力群攻'};
-    playback.phase='execute';if(S.tab=='fight')render();queueBattleStep(350);return;
+    playback.phase='execute';renderBattleUpdate();queueBattleStep(350);return;
   }
   const action=playback.acts[playback.index],units=[...B.T,...B.F],before=units.map(unit=>unit.hp),start=LOGL.length;
   action.t?pAct(action.t):fAct(action.f);
   const lines=LOGL.slice(start),changes=units.map((unit,i)=>({unit,delta:unit.hp-before[i]})).filter(x=>x.delta);
   B.fx={...B.fx,lines,changes,special:lines.some(line=>/必杀|连击|神佑|反震|群攻|蓄力/.test(line))};
-  playback.phase='complete';if(S.tab=='fight')render();queueBattleStep(B.fx.special?1200:900);
+  playback.phase='complete';renderBattleUpdate();queueBattleStep(B.fx.special?1200:900);
 }
 function finishBattleRound(){
   B.resolving=false;B.playback=null;B.fx=null;
   B.T.forEach(t=>t.cmd=null);
   if(endCheck())return;
   if(B.r>=30){LOGL.push('达到30回合，队伍撤退');return bend(0)}
-  B.pi=nxt(0);B.pend=null;B.nextRoundAt=Date.now()+650/S.battleSpeed;if(S.tab=='fight')render();
+  B.pi=nxt(0);B.pend=null;B.nextRoundAt=Date.now()+650/S.battleSpeed;renderBattleUpdate();
 }
 
 function bend(win){
@@ -880,7 +913,7 @@ function bend(win){
     if(win&&!S.farmHold){if(S.stage<30&&S.stage<S.maxStage)S.stage++;else S.farmHold=true}
     if(!win){if(S.stage>1){S.stage--;S.farmHold=true;LOGL.push('↩️ 连续自动退回第'+S.stage+'关挂机')}else{S.farmOn=false;S.farmHold=false;LOGL.push('连续自动已停止：第1关未通过')}}
   }
-  window.hap&&hap();save();render();if(S.farmOn)scheduleFarm();
+  window.hap&&hap();save();renderBattleUpdate();if(S.farmOn)scheduleFarm();
 }
 const rate=p=>Math.round(15+p.lv*2.5+p.ap.reduce((a,b)=>a+b)/400+p.q*10);
 function jobRow(p){
@@ -894,7 +927,7 @@ function idleView(){
   const o=S.off,h=o?.h||0,full=h>=capH(),bookReady=h>=12,shown=(Math.floor(h*10)/10).toFixed(1);
   return`<div class="card"><h3>离线收益</h3><div><b>已累计 ${shown} / ${capH()} 小时${full?' · 已满':''}</b></div><div class="sub" style="margin-top:4px">自然离线与广告加速统一累计，共用上限。基础12小时，每枚徽章+1小时，每个周目+2小时。</div>
   <div class="battle-focus ${bookReady?'special':''}"><strong>📚 ${bookReady?'高级技能书已达成':'累计满12小时，额外送高级技能书'}</strong><div class="sub">${bookReady?'领取本次收益时，随机获得1本高级技能书。':'当前 '+shown+' / 12 小时；再累计 '+(Math.ceil((12-h)*10)/10).toFixed(1)+' 小时达成。'}<br>奖励池：${BOSS_BOOKS.join('、')}（等概率）。每次领取最多1本，领取后重新累计；提前领取会清空本次进度。</div></div>
-  ${o?`<div class="sub" style="line-height:1.7;margin-top:4px">🪙 ${o.c} · 全队经验 +${o.exp}<br>红药 ${Math.floor(h*1.5)} · 蓝药 ${Math.floor(h)} · 进化石碎片 ${Math.floor(h/2)}（5片合成1个进化石）· 💎 ${Math.floor(h/4)}<br>队伍休整：忠诚度 +${Math.min(20,Math.round(h*2.5))}${h>=4?'<br>✨ 累计收益满4小时，可能触发奇遇（野生宠物或宝箱）':''}</div><div class="row" style="margin-top:8px"><button class="b" data-a="oc" ${B.run||OFF_AD?'disabled':''}>${B.run?'战斗结束后领取':OFF_AD?'加速中，请稍候':bookReady?'领取收益＋高级技能书':'领取收益'}</button></div>`:'<div class="sub" style="margin-top:8px">暂无待领取收益。离线或使用广告加速后，奖励会累计在这里。</div>'}
+  ${o?`<div class="sub" style="line-height:1.7;margin-top:4px">🪙 ${o.c} · 全队经验 +${o.exp}<br>红药 ${Math.floor(h*1.5)} · 蓝药 ${Math.floor(h)} · 进化石碎片 ${Math.floor(h/2)}（5片合成1个进化石）· 💎 ${Math.floor(h/4)}<br>队伍休整：忠诚度 +${Math.min(20,Math.round(h*2.5))}${h>=4?'<br>✨ 累计收益满4小时，可能触发奇遇（野生宠物或宝箱）':''}</div><div class="row" style="margin-top:8px"><button class="b" data-a="oc" ${OFF_AD?'disabled':''}>${OFF_AD?'加速中，请稍候':bookReady?'领取收益＋高级技能书':'领取收益'}</button></div>`:'<div class="sub" style="margin-top:8px">暂无待领取收益。离线或使用广告加速后，奖励会累计在这里。</div>'}
   <div class="row" style="margin-top:10px"><button class="b alt" data-a="offad" ${OFF_AD||full?'disabled':''}>${OFF_AD?'🎬 模拟广告播放中…':full?'离线收益已满':'🎬 看广告 · 加速最多2小时（模拟）'}</button></div><div class="sub" style="margin-top:6px;line-height:1.6">广告加速计入上面的累计时长和12小时技能书进度；剩余容量不足2小时时，只补满剩余时间。</div>${S.rep?`<div class="sub" style="margin-top:8px">上次领取：${S.rep}</div>`:''}</div>
   ${expView()}<div class="card"><h3>宠物派遣</h3><div class="sub" style="margin-bottom:8px">未参战的宠物外出打工，按时间产出金币、红药和蓝药（最多 8 小时），宠物越强收益越高。</div>${S.pets.map(jobRow).join('')}</div>`;
 }
@@ -915,7 +948,7 @@ function checkOff(){
   S.last=n;save();
 }
 function claim(){
-  const o=S.off;if(!o||B.run)return;if(OFF_AD)return toast('请等广告加速完成后一起领取');
+  const o=S.off;if(!o)return;if(OFF_AD)return toast('请等广告加速完成后一起领取');
   const h=o.h,pot=Math.floor(h*1.5),blue=Math.floor(h),sh=Math.floor(h/2),gm=Math.floor(h/4),ly=Math.min(20,Math.round(h*2.5));
   let up=0,st=0,ev='';
   S.coins+=o.c;addItem('red',pot);addItem('blue',blue);S.shard+=sh;S.gems+=gm;
@@ -934,10 +967,12 @@ function claim(){
   S.off=null;S.last=Date.now();save();toast('离线收益已领取'+(rewardBook?'，获得'+bookLabel(rewardBook)+'技能书 ×1':''));
 }
 function act(a,v){
-  if(B.run&&!['tab','battlespeed','cmd','auto','farm','tgt','ally','dq','ac','autopot','bagmed','aptinfo','offad','potrule','bagselect','bagfilter','shopcurrency','fuseresultopen','fuseresultclose'].includes(a))return;
   const p=get(S.sel);
+  if(B.run&&SCENE_BATTLE_LOCKS.includes(a))return toast('本场战斗结束后可调整阵容或切换关卡');
+  if(isBattlePet(p)&&PET_BATTLE_LOCKS.includes(a))return toast('这只宠物正在参战，请选择未参战宠物，或停止自动并等本场结束');
   if(a!=='washapply')WASH_CONFIRM=null;
   if(a=='tab'){S.tab=v;REL=0}
+  else if(a=='stopbackground'){S.farmOn=false;S.farmHold=false;if(FARM_TIMER)clearTimeout(FARM_TIMER);B.stopAfterBattle=!!B.run;toast(B.run?'本场战斗结束后停止自动，可继续操作其他页面':'已停止连续自动')}
   else if(a=='battlespeed'){const speed=Number(v);if(![1,2,4].includes(speed))return;S.battleSpeed=speed}
   else if(a=='rename'&&p){
     const form=$('pet-rename-form');if(!form||Number(form.dataset.petId)!==p.id)return;
@@ -1057,9 +1092,10 @@ function act(a,v){
     const r=Math.random(),mu=z.mut*(sup?6:1),ba=Math.min(.6,z.baby*(sup?3.5:1)),q=r<mu?2:r<ba?1:0;
     const rr=Math.random()<(sup?Math.min(.15,z.rare*4):z.rare),qq=rr?Math.max(q,1):q;LAST=mk(rr?z.rs:pick(z.sp),RI(z.lo,z.hi),qq,z);addPet(LAST);qp('cap');S.sel=LAST.id;toast('捕获 '+LAST.n+(rr?'！稀有宠物':qq?'！'+QN[qq]+'品质':''));
   }
-  else if(a=='mg'){const i=S.mg.indexOf(+v);if(i>=0)S.mg.splice(i,1);else{S.mg.push(+v);if(S.mg.length>2)S.mg.shift()}}
+  else if(a=='mg'){const i=S.mg.indexOf(+v);if(i>=0)S.mg.splice(i,1);else{if(isBattlePet(get(+v)))return toast('参战宠物暂不可炼化');S.mg.push(+v);if(S.mg.length>2)S.mg.shift()}}
   else if(a=='fuse'){
     if(S.mg.length<2)return toast('请选择两只宠物');
+    if(S.mg.some(id=>isBattlePet(get(id))))return toast('参战宠物暂不可炼化，请重新选择');
     if(S.coins<100)return toast('金币不足');
     const x=get(S.mg[0]),y=get(S.mg[1]);if(!x||!y||isExploring(x.id)||isExploring(y.id)||x.job||y.job)return toast('请先收回探险或派遣中的宠物');S.coins-=100;
     const q=Math.max(x.q,y.q,1),n=mk(pick([x.sp,y.sp]),1,q);n.el=pick([x.el,y.el]);n.nat=pick([x.nat,y.nat]);n.ab=pick([x.ab,y.ab]);
