@@ -37,6 +37,7 @@ button.b:disabled{opacity:.5}
 .tag{display:inline-block;background:var(--line);border-radius:8px;padding:2px 7px;margin:2px;font-size:12px}
 .tag.g{background:var(--gold);color:#3a2b00}
 .tag.bad{background:#a34242;color:#fff}
+.book-grade{display:inline-block;padding:2px 6px;border-radius:6px;font-size:11px;font-weight:700;white-space:nowrap}.book-grade.low{background:#dceafa;color:#245078}.book-grade.high{background:#f6dda0;color:#6b4300}.book-group{margin-top:12px}.book-item.high{border:1px solid var(--gold)}.book-item.low{border:1px solid var(--line)}
 .hb{height:10px;background:var(--line);border-radius:6px;overflow:hidden}
 .hf{height:100%;background:#4aa360;width:100%;transition:width .2s}.hf.e{background:#d4493b}
 .hb.mp{height:5px;margin-top:4px}.hf.m{background:#4d8bcc}.intent{display:block;color:var(--acc);font-size:11px;margin:5px 0;font-weight:700}.battle-help{line-height:1.7;margin-top:8px}.fc.ally-target{border-color:#4aa360;cursor:pointer}
@@ -71,6 +72,12 @@ const ITEMS={red:{n:'红药',e:'🔴',price:10,currency:'coins',desc:'战斗中�
 const LOOT=[{id:'red',n:'红药',e:'🔴',rate:[.25,.5],qty:[1,2]},{id:'blue',n:'蓝药',e:'🔵',rate:[.2,.4],qty:[1,2]},{id:'exp',n:'经验丹',e:'✨',rate:[.01,.04],qty:[1,1]},{id:'life',n:'长寿丹',e:'🌿',rate:[.003,.01],qty:[1,1]},{id:'shard',n:'进化石碎片',e:'🧩',rate:[.05,.2],qty:[1,2]},{id:'stone',n:'进化石',e:'🪨',rate:[.002,.03],qty:[1,1]}];
 const BADSK=ELS.map(e=>'弱'+e),OLD_BADSK=['虚弱','迟钝','薄甲'],WEAK_SP=[0,1,5,8],weakFor=el=>'弱'+ELS[BEAT.indexOf(el)],SKN=Object.keys(SK).filter(k=>!BADSK.includes(k)),AN=['攻击','防御','体力','法力','速度'],TN=['体质','魔力','力量','耐力','敏捷'],QN=['野生','宝宝','变异'];
 const BOOK_RATE=[.02,.12],BOSS_BOOKS=['神佑','地狱烈火'];
+const BOOK_GRADES={low:{name:'低级',weight:3},high:{name:'高级',weight:1}};
+const bookGrade=k=>BOSS_BOOKS.includes(k)?'high':'low';
+const bookLabel=k=>'【'+BOOK_GRADES[bookGrade(k)].name+'】'+k;
+const bookBadge=k=>'<span class="book-grade '+bookGrade(k)+'">'+BOOK_GRADES[bookGrade(k)].name+'</span>';
+const bookWeight=k=>BOOK_GRADES[bookGrade(k)].weight;
+function rollBook(pool){if(!pool.length)return null;let roll=Math.random()*pool.reduce((sum,k)=>sum+bookWeight(k),0);for(const k of pool){roll-=bookWeight(k);if(roll<0)return k}return pool[pool.length-1]}
 const REGION_BOOKS=[['连击','必杀','反震'],['再生','治疗','护佑'],['烈火','吸血','再生'],['定身','治疗','护佑'],['必杀','反震','神佑'],['烈火','地狱烈火','神佑']];
 const ELEMENT_BOOKS=[['连击','必杀','反震'],['治疗','再生','定身'],['治疗','护佑','神佑'],['烈火','地狱烈火','吸血'],['反震','护佑','神佑']];
 const ZONES=[
@@ -216,7 +223,7 @@ function hfoes(){const h=huntInfo(),fs=foes(h.st);return fs.map((f,i)=>{f.n='悬
 function curFoes(){return S.mode=='tower'?tfoes(S.floor):S.mode=='hunt'?hfoes():foes(S.stage)}
 function lootContext(foes=B.F){const mode=B.run?(B.tw?'tower':B.hunt?'hunt':'main'):S.mode;return{mode,region:Math.floor((S.stage-1)/5)%6,el:foes[1].el,boss:foes.some(f=>f.boss),where:mode=='tower'?'无尽塔第'+S.floor+'层':mode=='hunt'?'悬赏第'+(S.hunt.clears+1)+'场':'主线第'+S.stage+'关'}}
 function bookPool(context){const pool=context.mode=='tower'?SKN:context.mode=='hunt'?ELEMENT_BOOKS[context.el]||REGION_BOOKS[0]:REGION_BOOKS[context.region||0];return pool.filter(k=>context.boss||!BOSS_BOOKS.includes(k))}
-function lootItemText(x){if(x.id=='book')return'📚《'+x.skill+'》技能书 ×'+x.qty;const d=LOOT.find(d=>d.id==x.id);return d?d.e+d.n+' ×'+x.qty:''}
+function lootItemText(x){if(x.id=='book')return'📚'+bookLabel(x.skill)+'技能书 ×'+x.qty;const d=LOOT.find(d=>d.id==x.id);return d?d.e+d.n+' ×'+x.qty:''}
 function grantBattleLoot(context){
   const tier=context.boss?1:0,items=[];
   for(const item of LOOT){
@@ -226,7 +233,7 @@ function grantBattleLoot(context){
     items.push({id:item.id,qty});
   }
   const pool=bookPool(context);
-  if(pool.length&&Math.random()<BOOK_RATE[tier]){const skill=pick(pool);S.bag.books[skill]=bookCount(skill)+1;items.push({id:'book',skill,qty:1})}
+  if(pool.length&&Math.random()<BOOK_RATE[tier]){const skill=rollBook(pool);S.bag.books[skill]=bookCount(skill)+1;items.push({id:'book',skill,qty:1})}
   if(!items.length){LOGL.push('🎒 本场未掉落额外道具');return}
   const names=items.map(lootItemText);
   LOGL.push('🎁 战利品已入背包：'+names.join('、'));
@@ -235,8 +242,8 @@ function grantBattleLoot(context){
   S.lootLog.unshift({where:context.where,boss:context.boss,items,crafted,time:Date.now()});S.lootLog=S.lootLog.slice(0,6);
 }
 function lootOdds(foes){
-  const tier=foes.some(f=>f.boss)?1:0,pool=bookPool(lootContext(foes));
-  return`<details class="sub battle-help"><summary>🎁 查看${tier?'Boss':'普通战斗'}掉落概率</summary><div>胜利后每种道具独立判定一次，可能掉多种，也可能没有；参战数量不影响掉落。连续自动战斗也会收取。</div>${LOOT.map(d=>`<div>${d.e} ${d.n} ×${d.qty[tier]} · ${+(d.rate[tier]*100).toFixed(1)}%</div>`).join('')}<div>📚 技能书 ×1 · ${BOOK_RATE[tier]*100}%<br>本场书种：${pool.join('、')}（掉书后等概率抽取一本）。</div><div>本表是额外随机掉落，关卡固定奖励会另外结算。</div></details>`;
+  const tier=foes.some(f=>f.boss)?1:0,pool=bookPool(lootContext(foes)),weight=pool.reduce((sum,k)=>sum+bookWeight(k),0);
+  return`<details class="sub battle-help"><summary>🎁 查看${tier?'Boss':'普通战斗'}掉落概率</summary><div>胜利后每种道具独立判定一次，可能掉多种，也可能没有；参战数量不影响掉落。连续自动战斗也会收取。</div>${LOOT.map(d=>`<div>${d.e} ${d.n} ×${d.qty[tier]} · ${+(d.rate[tier]*100).toFixed(1)}%</div>`).join('')}<div>📚 技能书 ×1 · 总掉率 ${BOOK_RATE[tier]*100}%</div>${pool.map(k=>`<div>${bookBadge(k)} ${k} · 每场约 ${(BOOK_RATE[tier]*bookWeight(k)/weight*100).toFixed(2)}%</div>`).join('')}<div>高级书仅Boss掉落，同一书池里比单本低级书更稀有。本表是额外随机掉落，关卡固定奖励会另外结算。</div></details>`;
 }
 function lootHistory(){
   return`<div class="card"><h3>🎁 最近掉落</h3><div class="sub">保留最近6次有掉落的战斗，自动挂机的收获也会记录。</div>${S.lootLog.length?S.lootLog.map(entry=>`<div class="sub" style="margin-top:10px;line-height:1.7"><b>${entry.where}${entry.boss?' · Boss':''}</b> · ${new Date(entry.time).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})}<br>${entry.items.map(lootItemText).join('、')}${entry.crafted?'<br>碎片合成进化石 ×'+entry.crafted:''}</div>`).join(''):'<div class="sub" style="margin-top:8px">还没有掉落记录，赢得战斗后有机会获得道具。</div>'}</div>`;
@@ -280,12 +287,18 @@ const itemCount=id=>S.bag?.[id]||0;
 const bookCount=skill=>S.bag.books?.[skill]||0;
 function bookUseView(p,expanded=false){
   const owned=SKN.filter(k=>bookCount(k)>0);
-  const intro='<div class="sub" style="margin:8px 0;line-height:1.7">使用一本对应技能书学习技能，不额外收费。技能栏已满时会随机覆盖一个已有技能；已学会的技能不会消耗书。</div>';
+  const intro='<div class="sub" style="margin:8px 0;line-height:1.7">技能书分低级与高级，高级书仅Boss掉落。使用一本对应技能书学习技能，不额外收费。技能栏已满时会随机覆盖一个已有技能；已学会的技能不会消耗书。</div>';
   if(!owned.length)return intro+'<div class="sub">暂无技能书。战斗胜利有概率掉落，Boss 的掉率更高。</div>';
-  return intro+`<div class="${expanded?'bag-grid':'row'}">${owned.map(k=>{const disabled=B.run||!p||p.sk.includes(k);const button=`<button class="b alt" data-a="book" data-v="${k}" title="${SK[k]}" ${disabled?'disabled':''}>${expanded?'使用':'📚 '+k+' ×'+bookCount(k)}${p?.sk.includes(k)?'（已学会）':''}</button>`;return expanded?`<div class="bag-item"><h3>📚 ${k}<span>×${bookCount(k)}</span></h3><div class="sub">${SK[k]}</div><div class="row">${button}</div></div>`:button}).join('')}</div>`;
+  return intro+['low','high'].map(grade=>{
+    const books=owned.filter(k=>bookGrade(k)==grade);if(!books.length)return '';
+    return`<div class="book-group"><div class="sub" style="margin-bottom:6px">${BOOK_GRADES[grade].name}技能书</div><div class="${expanded?'bag-grid':'row'}">${books.map(k=>{
+      const disabled=B.run||!p||p.sk.includes(k),button=`<button class="b alt" data-a="book" data-v="${k}" title="${bookLabel(k)}：${SK[k]}" ${disabled?'disabled':''}>${expanded?'使用':bookBadge(k)+' '+k+' ×'+bookCount(k)}${p?.sk.includes(k)?'（已学会）':''}</button>`;
+      return expanded?`<div class="bag-item book-item ${grade}"><h3>📚 ${k}<span>×${bookCount(k)}</span></h3>${bookBadge(k)}<div class="sub" style="margin-top:6px">${SK[k]}</div><div class="row">${button}</div></div>`:button;
+    }).join('')}</div></div>`;
+  }).join('');
 }
 function bookBagView(p){
-  return`<div class="card"><h3>📚 技能书</h3><div class="sub">使用对象：${p?p.n+' · Lv'+p.lv:'未选择'}（可在上方切换宠物）${B.run?' · 战斗中不能打书':''}</div>${bookUseView(p,true)}<details class="sub battle-help"><summary>去哪刷技能书？</summary><div>普通战斗2%、Boss 12%概率掉一本。标注「Boss」的书仅首领战斗会掉。</div>${REG.map((r,i)=>`<div><b>${r.n}（${i*5+1}–${i*5+5}关）</b>：${REGION_BOOKS[i].map(k=>k+(BOSS_BOOKS.includes(k)?'〔Boss〕':'')).join('、')}</div>`).join('')}<div>无尽塔从通用书池掉落，塔主可掉全部书种；悬赏按本场敌人五行决定书种。战斗页可以查看本场掉落名单。</div></details></div>`;
+  return`<div class="card"><h3>📚 技能书</h3><div class="sub">使用对象：${p?p.n+' · Lv'+p.lv:'未选择'}（可在上方切换宠物）${B.run?' · 战斗中不能打书':''}</div><div class="sub" style="margin-top:8px;line-height:1.7">低级烈火：8蓝，高伤单体。高级地狱烈火：12蓝，低伤群体。两者可以同时保留，按敌人数选择使用；打书仍需要技能栏。</div>${bookUseView(p,true)}<details class="sub battle-help"><summary>去哪刷技能书？</summary><div>普通战斗2%、Boss 12%概率掉一本。高级书仅Boss掉落，比同一书池中的单本低级书更稀有。</div>${REG.map((r,i)=>`<div><b>${r.n}（${i*5+1}–${i*5+5}关）</b>：${REGION_BOOKS[i].map(bookLabel).join('、')}</div>`).join('')}<div>无尽塔普通层掉低级书，塔主可掉两级书；悬赏按本场敌人五行决定书种。战斗页显示本场各书的实际掉率。</div></details></div>`;
 }
 function addItem(id,n){if(ITEMS[id]&&Number.isInteger(n)&&n>0)S.bag[id]=itemCount(id)+n}
 function buyItem(id,n){
