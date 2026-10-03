@@ -554,6 +554,7 @@ function detail(p){
   const draft=pointDraft(p),pending=draft.reduce((a,b)=>a+b,0),left=p.fp-pending;
   const s=stats({...p,at:p.at.map((v,i)=>v+draft[i])}),sl=slots(p);
   return`<div class="card"><h3>${emo(p)} ${p.n} · Lv${p.lv} <span class="tag ${p.q==2?'g':''}">${QN[p.q]}</span></h3>
+  ${p.sp===6?'<div class="sub" style="margin:0 0 10px">「这倒是提醒我了」</div>':''}
   ${renameView(p)}
   <div class="sub">${isGatherer(p)?`⛏ 采集型：探险采矿金币+${p.q==2?40:25}%<br>`:''}五行 ${ELC[p.el]}${ELS[p.el]} · 经验 ${p.exp}/${Math.round(p.lv*p.lv*1.65)} · 成长率 ${p.g} · 忠诚 ${p.loy}<br>性格 ${NAT[p.nat][0]}（${NAT[p.nat][3]}）· 特性 ${AB[p.ab][0]}：${AB[p.ab][1]}${p.loy<60?' ⚠️属性-15%':''}</div>
   ${aptitudeView(p)}
