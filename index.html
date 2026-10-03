@@ -125,7 +125,7 @@ function mk(sp,lv,q,z,id=S.nid++){
   return{id,sp,n:(q==2?'变异':'')+SP[sp].n,lv,exp:0,ap:SP[sp].b.map(v=>Math.round(v*R(lo,hi))),g:+R(gl,gh).toFixed(3),at:[10,10,10,10,10],fp:5*lv,sk,loy:100,q,el,xl:[0,0,0],nd:[],ev:0,nat:RI(0,5),ab:RI(0,5)};
 }
 const get=id=>S.pets.find(p=>p.id===id);
-const slots=p=>(p.q==2?5:p.q?4:3)+(p.ev||0);
+const slots=p=>(p.q==2?5:p.q?4:3)+(p.ev||0)+(Number.isFinite(p.fusionSlots)?Math.max(0,Math.floor(p.fusionSlots)):0);
 function stats0(p){
   const m=p.loy<60?.85:1,[c,g,s,e,a]=p.at,ap=p.ap,L=p.lv,G=p.g;
   return{hp:Math.round(30+(L*ap[2]/1000+c*G*ap[2]/1500)*m),mag:Math.round((10+L*ap[3]/1000+g*G*ap[3]/1500)*m),atk:Math.round((20+L*ap[0]/1000+s*G*(ap[0]+1640)/3750)*m),def:Math.round((5+L*ap[1]/1500+e*G*ap[1]/1500)*m),spd:Math.round((5+L*ap[4]/1000+a*G*ap[4]/1200)*m)};
@@ -459,11 +459,11 @@ function fusionResultView(r){
   const aptitudeChange=(p.ap.reduce((a,b)=>a+b,0)/base.reduce((a,b)=>a+b,0)-1)*100,skillChange=p.sk.length-Math.max(x.sk.length,y.sk.length),growthChange=p.g-avgG;
   const improved=p.ap.filter((v,i)=>v>Math.max(x.ap[i],y.ap[i])).length,missing=[...new Set([...x.sk,...y.sk])].filter(k=>!p.sk.includes(k));
   const signed=(n,d=1)=>(n>0?'+':'')+n.toFixed(d),rating=skillChange>0?'技能数量突破':improved?'资质有所突破':aptitudeChange>=3?'资质稳步提升':'常规炼化结果';
-  return`<section class="card fusion-result" id="fusion-result" aria-label="炼化结果"><h3>🔮 炼化完成 · ${emo(p)} ${p.n}</h3><div class="fusion-rating">${rating}</div><div class="sub battle-help">${x.n} ＋ ${y.n} → ${p.n}<br>${QN[p.q]} · Lv${p.lv} · 基础形态 · 技能 ${p.sk.length}/${slots(p)}<br>资质总和较父母均值 ${signed(aptitudeChange)}%，成长率 ${signed(growthChange,3)}；技能数较父母中较多的一只 ${signed(skillChange,0)} 个。</div><div class="row" style="margin-top:8px">${r.resonance?'<span class="tag g">触发技能共鸣</span>':''}${improved?`<span class="tag g">${improved} 项资质超过双亲</span>`:''}${p.sk.some(k=>BADSK.includes(k))?'<span class="tag bad">带有属性弱点</span>':''}</div><table class="fusion-table"><thead><tr><th>属性</th><th>父母均值</th><th>新宠</th><th>变化</th></tr></thead><tbody>${p.ap.map((v,i)=>`<tr><td>${AN[i]}资质</td><td>${base[i]}</td><td>${v}</td><td>${signed(v-base[i])}</td></tr>`).join('')}<tr><td>成长率</td><td>${avgG.toFixed(3)}</td><td>${p.g.toFixed(3)}</td><td>${signed(growthChange,3)}</td></tr></tbody></table><div class="sub">比较的是资质与成长率；炼化后从 Lv1 开始。</div><h3 style="margin-top:14px">技能结果</h3><div class="sub battle-help">继承 ${r.inherited.length} 个${r.learned.length?' · 额外领悟 '+r.learned.length+' 个':''}</div>${p.sk.map(k=>`<div class="sub battle-help"><span class="tag ${BADSK.includes(k)?'bad':'g'}">${k}</span> ${r.learned.includes(k)?'额外领悟':'继承'} · ${SK[k]}</div>`).join('')||'<div class="sub">本次没有保留技能</div>'}${missing.length?`<details class="sub battle-help"><summary>未保留的技能 (${missing.length})</summary>${missing.join('、')}</details>`:''}${fusionQuickOption()}<div class="row" style="margin-top:12px"><button class="b" data-a="fuseresultclose">收下，继续炼化</button></div></section>`;
+  return`<section class="card fusion-result" id="fusion-result" aria-label="炼化结果"><h3>🔮 炼化完成 · ${emo(p)} ${p.n}</h3><div class="fusion-rating">${rating}</div><div class="sub battle-help">${x.n} ＋ ${y.n} → ${p.n}<br>${QN[p.q]} · Lv${p.lv} · 基础形态 · 技能 ${p.sk.length}/${slots(p)}${p.fusionSlots?" · 突破 +"+p.fusionSlots+" 格":""}<br>资质总和较父母均值 ${signed(aptitudeChange)}%，成长率 ${signed(growthChange,3)}；技能数较父母中较多的一只 ${signed(skillChange,0)} 个。</div><div class="row" style="margin-top:8px">${r.resonance?'<span class="tag g">触发技能共鸣</span>':''}${improved?`<span class="tag g">${improved} 项资质超过双亲</span>`:''}${p.sk.some(k=>BADSK.includes(k))?'<span class="tag bad">带有属性弱点</span>':''}</div><table class="fusion-table"><thead><tr><th>属性</th><th>父母均值</th><th>新宠</th><th>变化</th></tr></thead><tbody>${p.ap.map((v,i)=>`<tr><td>${AN[i]}资质</td><td>${base[i]}</td><td>${v}</td><td>${signed(v-base[i])}</td></tr>`).join('')}<tr><td>成长率</td><td>${avgG.toFixed(3)}</td><td>${p.g.toFixed(3)}</td><td>${signed(growthChange,3)}</td></tr></tbody></table><div class="sub">比较的是资质与成长率；炼化后从 Lv1 开始。</div><h3 style="margin-top:14px">技能结果</h3><div class="sub battle-help">继承 ${r.inherited.length} 个${r.learned.length?' · 额外领悟 '+r.learned.length+' 个':''}</div>${p.sk.map(k=>`<div class="sub battle-help"><span class="tag ${BADSK.includes(k)?'bad':'g'}">${k}</span> ${r.learned.includes(k)?'额外领悟':'继承'} · ${SK[k]}</div>`).join('')||'<div class="sub">本次没有保留技能</div>'}${missing.length?`<details class="sub battle-help"><summary>未保留的技能 (${missing.length})</summary>${missing.join('、')}</details>`:''}${fusionQuickOption()}<div class="row" style="margin-top:12px"><button class="b" data-a="fuseresultclose">收下，继续炼化</button></div></section>`;
 }
 function fusionView(){
   const result=S.fusionResult,show=!!result&&FUSION_RESULT_OPEN;
-  return`${show?fusionResultView(result):result?`<div class="card"><b>上次炼化：${result.pet.n}</b><div class="sub" style="margin:6px 0">${QN[result.pet.q]} · ${result.pet.sk.length} 个技能${result.resonance?' · 技能共鸣':''}</div><button class="b alt" data-a="fuseresultopen">查看结果评价</button></div>`:''}<div class="card"><h3>🔮 炼化 · 100🪙</h3><details class="sub battle-help"><summary>炼化规则</summary><div>选择两只宠物，消耗它们炼出一只新宠物：资质取平均并有机会提升，最低为宝宝品质，从 Lv1 基础形态开始。父母独有技能各有50%概率继承，共有技能为80%；另有30%概率触发技能共鸣，额外继承最多2个未继承的技能。技能数量受新宠技能格限制；属性弱点需符合自身五行。</div></details><div class="sub" style="margin:10px 0">已选择 ${S.mg.length}/2 · 炼化会消耗所选两只宠物</div><div class="row">${S.pets.map(q=>`<button class="pc ${S.mg.includes(q.id)?'sel':''}" data-a="mg" data-v="${q.id}" ${B.run?'disabled':''}><b>${emo(q)}</b>${q.n}<br>Lv${q.lv} · 技能${q.sk.length}</button>`).join('')}</div>${show?'':fusionQuickOption()}<button class="b" style="margin-top:12px" data-a="fuse" ${B.run||S.mg.length!==2||S.coins<100?'disabled':''}>${S.fuseQuick===true?'快速炼化':'炼化'} · 100🪙</button></div>`;
+  return`${show?fusionResultView(result):result?`<div class="card"><b>上次炼化：${result.pet.n}</b><div class="sub" style="margin:6px 0">${QN[result.pet.q]} · ${result.pet.sk.length} 个技能${result.resonance?' · 技能共鸣':''}</div><button class="b alt" data-a="fuseresultopen">查看结果评价</button></div>`:''}<div class="card"><h3>🔮 炼化 · 100🪙</h3><details class="sub battle-help"><summary>炼化规则</summary><div>选择两只宠物，消耗它们炼出一只新宠物：资质取平均并有机会提升，最低为宝宝品质，从 Lv1 基础形态开始。父母独有技能各有50%概率继承，共有技能为80%；另有30%概率触发技能共鸣，额外继承最多2个未继承的技能。所有技能（包括任意五行弱点）均可继承，不受宠物种类或自身五行限制。同名技能合并为一个；有机会保留父母全部不同技能，超过基础技能格时自动增加技能格并保存。</div></details><div class="sub" style="margin:10px 0">已选择 ${S.mg.length}/2 · 炼化会消耗所选两只宠物</div><div class="row">${S.pets.map(q=>`<button class="pc ${S.mg.includes(q.id)?'sel':''}" data-a="mg" data-v="${q.id}" ${B.run?'disabled':''}><b>${emo(q)}</b>${q.n}<br>Lv${q.lv} · 技能${q.sk.length}</button>`).join('')}</div>${show?'':fusionQuickOption()}<button class="b" style="margin-top:12px" data-a="fuse" ${B.run||S.mg.length!==2||S.coins<100?'disabled':''}>${S.fuseQuick===true?'快速炼化':'炼化'} · 100🪙</button></div>`;
 }
 document.addEventListener('change',e=>{
   if(e.target.matches('input[data-setting="fuseQuick"]')&&!B.run){S.fuseQuick=e.target.checked;if(S.fuseQuick)FUSION_RESULT_OPEN=false;save();render()}
@@ -551,7 +551,7 @@ function detail(p){
   <div class="sub" style="margin-bottom:6px">${pending?'属性预览：已预分配 '+pending+' 点，确认后生效。':'先分配点数，再点击确认；“全部”将剩余点数加到该属性。'}</div>
   ${p.at.map((v,i)=>`<div class="at"><span>${TN[i]} <b>${v}</b>${draft[i]?` <span style="color:var(--acc)">+${draft[i]}</span>`:''}</span><span><button data-a="pt" data-v="${i},-1" ${draft[i]?'':'disabled'} aria-label="撤回1点${TN[i]}">−1</button> <button data-a="pt" data-v="${i},1" ${left>0?'':'disabled'}>+1</button> <button data-a="pt" data-v="${i},5" ${left>0?'':'disabled'}>+5</button> <button data-a="pt" data-v="${i},all" ${left>0?'':'disabled'}>全部</button></span></div>`).join('')}
   <div class="row" style="margin-top:8px"><button class="b" data-a="ptconfirm" ${pending?'':'disabled'}>确认加点${pending?'（'+pending+'点）':''}</button><button class="b alt" data-a="ptcancel" ${pending?'':'disabled'}>撤回本次</button></div>
-  <div style="margin-top:8px">技能 (${p.sk.length}/${sl}): ${p.sk.map(k=>`<span class="tag ${BADSK.includes(k)?'bad':'g'}" title="${SK[k]}">${k}</span>`).join('')||'<span class="sub">无</span>'}</div>
+  <div style="margin-top:8px">技能 (${p.sk.length}/${sl})${p.fusionSlots?" · 炼化突破 +"+p.fusionSlots+" 格":""}: ${p.sk.map(k=>`<span class="tag ${BADSK.includes(k)?'bad':'g'}" title="${SK[k]}">${k}</span>`).join('')||'<span class="sub">无</span>'}</div>
   <details class="sub battle-help"><summary>查看技能效果 · 魔法上限 ${maxMana({...p,at:p.at.map((v,i)=>v+draft[i])})}</summary>${p.sk.map(k=>`<div><b>${k}</b>：${SK[k]||'未知技能'}</div>`).join('')}<div>魔力加点同时提升法攻与魔法上限。每场开始时气血和魔法补满。</div></details>
   ${p.sk.some(k=>BADSK.includes(k))?`<div class="sub" style="margin-top:6px">红色弱点技能会使对应五行的来袭伤害额外增加20%，并占用技能栏；可花150🪙净化。</div><div class="row">${p.sk.filter(k=>BADSK.includes(k)).map(k=>`<button class="b alt" data-a="purge" data-v="${k}">净化${k} 150🪙</button>`).join('')}</div>`:''}
   ${evoHtml(p)}
@@ -984,13 +984,13 @@ function act(a,v){
     const q=Math.max(x.q,y.q,1),n=mk(pick([x.sp,y.sp]),1,q);n.el=pick([x.el,y.el]);n.nat=pick([x.nat,y.nat]);n.ab=pick([x.ab,y.ab]);
     n.ap=x.ap.map((v,i)=>Math.round((v+y.ap[i])/2*R(.98,1.08)));
     n.g=+Math.min(1.5,(x.g+y.g)/2+R(0,.06)).toFixed(3);
-    const allowedWeak=WEAK_SP.includes(n.sp)?weakFor(n.el):null,pool=[...new Set([...x.sk,...y.sk].filter(k=>!BADSK.includes(k)||k===allowedWeak))];for(let i=pool.length-1;i>0;i--){const j=RI(0,i);[pool[i],pool[j]]=[pool[j],pool[i]]}
+    const pool=[...new Set([...x.sk,...y.sk])];for(let i=pool.length-1;i>0;i--){const j=RI(0,i);[pool[i],pool[j]]=[pool[j],pool[i]]}
     const sk=pool.filter(k=>Math.random()<(x.sk.includes(k)&&y.sk.includes(k)?.8:.5));
     let resonance=false;
-    if(Math.random()<.3){const missing=pool.filter(k=>!sk.includes(k)),extra=Math.min(2,slots(n)-sk.length,missing.length);for(let i=0;i<extra;i++){sk.push(missing[i]);resonance=true}}
-    const inherited=Math.min(sk.length,slots(n));
+    if(Math.random()<.3){const missing=pool.filter(k=>!sk.includes(k)),extra=Math.min(2,missing.length);for(let i=0;i<extra;i++){sk.push(missing[i]);resonance=true}}
+    const inherited=sk.length;
     if(sk.length<slots(n)&&Math.random()<.15){const fresh=SKN.filter(k=>!sk.includes(k));if(fresh.length)sk.push(pick(fresh))}
-    n.sk=sk.slice(0,slots(n));
+    n.sk=sk;n.fusionSlots=Math.max(0,sk.length-slots(n));
     S.fusionResult={pet:JSON.parse(JSON.stringify(n)),parents:[x,y].map(p=>({n:p.n,ap:p.ap.slice(),g:p.g,sk:p.sk.slice()})),inherited:n.sk.slice(0,inherited),learned:n.sk.slice(inherited),resonance,time:Date.now()};
     FUSION_RESULT_OPEN=S.fuseQuick!==true;
     S.pets=S.pets.filter(q=>q.id!==x.id&&q.id!==y.id);S.pets.push(n);dx(n);
@@ -1012,8 +1012,7 @@ load();initBag();initSkins();S.xps=Array.isArray(S.xps)?S.xps:[null,null,null];w
 S.pets.forEach(p=>{
   p.el??=RI(0,4);p.xl??=[0,0,0];p.nd??=[];delete p.life;p.job??=0;p.ev??=0;p.nat??=RI(0,5);p.ab??=RI(0,5);p.sk??=[];
   const hadLegacy=p.sk.some(k=>OLD_BADSK.includes(k));p.sk=p.sk.filter(k=>!OLD_BADSK.includes(k));
-  if(WEAK_SP.includes(p.sp)){const weakness=weakFor(p.el);p.sk=p.sk.filter(k=>!BADSK.includes(k)||k===weakness);if(hadLegacy&&!p.sk.includes(weakness)&&p.sk.length<slots(p))p.sk.push(weakness)}
-  else p.sk=p.sk.filter(k=>!BADSK.includes(k));
+  if(hadLegacy&&WEAK_SP.includes(p.sp)){const weakness=weakFor(p.el);if(!p.sk.includes(weakness)&&p.sk.length<slots(p))p.sk.push(weakness)}
 });checkOff();
 if(!S.pets.length){for(let i=0;i<3;i++)S.pets.push(mk((i*2+RI(0,1))%6,5,i?0:1));S.active=S.sel=S.pets[0].id;S.team=S.pets.map(x=>x.id)}
 if(!Array.isArray(S.team))S.team=get(S.active)?[S.active]:[];S.team=[...new Set(S.team)].filter(x=>get(x)).slice(0,3);S.active=S.team[0]||0;
