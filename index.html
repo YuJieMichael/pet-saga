@@ -40,6 +40,7 @@ button.b:disabled{opacity:.5}
 .tag{display:inline-block;background:var(--line);border-radius:8px;padding:2px 7px;margin:2px;font-size:12px}
 .tag.g{background:var(--gold);color:#3a2b00}
 .tag.bad{background:#a34242;color:#fff}
+.pet-sprite{display:inline-block}.pet-sprite.skin-green{filter:grayscale(1) sepia(1) saturate(7) hue-rotate(65deg)}.skin-preview{display:flex;align-items:center;justify-content:center;gap:24px;margin:16px 0;padding:16px;border-radius:12px;background:var(--bg);text-align:center}.skin-preview .pet-sprite{font-size:54px;line-height:1.25}.skin-preview small{display:block;margin-top:6px;color:var(--sub)}.skin-copy{font-size:15px;line-height:1.7;margin:10px 0;color:var(--ink)}
 .book-grade{display:inline-block;padding:2px 6px;border-radius:6px;font-size:11px;font-weight:700;white-space:nowrap}.book-grade.low{background:#dceafa;color:#245078}.book-grade.high{background:#f6dda0;color:#6b4300}.book-group{margin-top:12px}.book-item.high{border:1px solid var(--gold)}.book-item.low{border:1px solid var(--line)}
 .hb{height:10px;background:var(--line);border-radius:6px;overflow:hidden}
 .hf{height:100%;background:#4aa360;width:100%;transition:width .2s}.hf.e{background:#d4493b}
@@ -97,6 +98,8 @@ const APT_BANDS=[[.82,.95],[.96,1.06],[1.16,1.28]],EV_AP=[1.12,1.1];
 let APT_INFO=null;
 let OFF_AD=false;
 let BAG_ITEM=null,SHOP_CURRENCY='coins';
+const SKINS={green:{n:'整成绿的',price:30,desc:'我今天就得花钱就得把这玩意整成绿的'}};
+function initSkins(){S.skins=Array.isArray(S.skins)?[...new Set(S.skins.filter(k=>Object.hasOwn(SKINS,k)))]:[];S.pets.forEach(p=>{if(!S.skins.includes(p.skin))delete p.skin})}
 function mk(sp,lv,q,z){
   const [lo,hi]=APT_BANDS[q],[gl,gh]=[[.85,1],[1,1.15],[1.25,1.4]][q];
   const sk=[],n=q==0?RI(0,1):q==1?2:3;
@@ -116,7 +119,8 @@ const NAT=[['勇敢','atk','spd','攻击+10% 速度-10%'],['沉稳','def','atk',
 const AB=[['先手','每回合最先行动'],['逆境','气血低于40%时伤害+30%'],['不屈','每场战斗一次，受致命伤时保留1点气血'],['厚皮','受到伤害-12%'],['破甲','大幅削弱敌人防御'],['激励','在场时全队伤害+8%']];
 const EVN=[['应龙','龙神'],['玄龟','玄武'],['灵狸','神狸'],['猛虎','白虎'],['金燕','凤凰'],['灵蛙','蛙王'],['仙鹿','神鹿'],['狮王','战神狮'],['炎龙','焚天龙']];
 const DEXM=[[10,'🪙300'],[20,'💎10'],[30,'进化石x3'],[40,'💎30']];
-const emo=p=>SP[p.sp].e+(p.ev>1?'✨':'');
+const petPortrait=(p,skin='')=>`<span class="pet-sprite ${skin=='green'?'skin-green':''}" role="img" aria-label="${SP[p.sp].n}${skin=='green'?'，整成绿的皮肤':''}">${SP[p.sp].e}</span>`+(p.ev>1?'✨':'');
+const emo=p=>petPortrait(p,S.skins?.includes(p.skin)?p.skin:'');
 function dx(p){const d=S.dex[p.sp]||(S.dex[p.sp]={e:0,b:0,m:0});d.e=Math.max(d.e,p.ev||0);if(p.q==1)d.b=1;if(p.q==2)d.m=1}
 function dexScore(){let n=0;for(const k in S.dex){const d=S.dex[k];n+=1+d.b+d.m+(d.e>=1?1:0)+(d.e>=2?1:0)}return n}
 function stats(p){const r=stats0(p),bd=.02*(S.badges.length+6*S.ng),b=1+.01*Math.floor(dexScore()/5)+bd,n=NAT[p.nat||5];r.hp=Math.round(r.hp*b);r.atk=Math.round(r.atk*b);r.def=Math.round(r.def*(1+bd));if(n[1])r[n[1]]=Math.round(r[n[1]]*1.1);if(n[2])r[n[2]]=Math.round(r[n[2]]*.9);return r}
@@ -341,12 +345,16 @@ function bagView(){
   return`<div class="card"><h3>🎒 背包 <span class="sub">${entries.length} 种物品</span></h3><div class="sub">点击格子查看物品。同类道具自动叠加，格子随物品种类增加。</div><div class="inventory-grid">${entries.map(x=>`<button class="inventory-slot ${x.grade||''} ${it?.id===x.id?'selected':''}" data-a="bagselect" data-v="${x.id}" aria-label="${x.grade?BOOK_GRADES[x.grade].name:''}${x.n}，数量${x.qty}" aria-pressed="${it?.id===x.id}">${x.grade?`<span class="item-tier">${BOOK_GRADES[x.grade].name}</span>`:''}<span class="item-count">×${x.qty}</span><span class="item-icon" aria-hidden="true">${x.e}</span><span class="item-name">${x.n}</span></button>`).join('')}${Array.from({length:capacity-entries.length},()=>'<div class="inventory-slot empty" aria-hidden="true"></div>').join('')}</div></div>
   ${it?`<div class="card"><h3>${it.e} ${it.n} ×${it.qty} ${it.grade?bookBadge(it.n):''}</h3><div class="sub battle-help">${it.desc}</div>${it.kind=='growth'?`<div class="sub" style="margin-top:10px">使用对象：${pet?pet.n+' · Lv'+pet.lv:'请选择宠物'}${B.run?' · 战斗中暂不可使用':''}</div><div class="row bag-picker">${S.pets.map(p=>`<button class="pc ${p.id===S.sel?'sel':''}" data-a="sel" data-v="${p.id}" ${B.run?'disabled':''}>${emo(p)} ${p.n}<br>Lv${p.lv}</button>`).join('')}</div><button class="b" style="margin-top:10px" data-a="useitem" data-v="${it.id}" ${B.run||!pet||it.id=='exp'&&pet.lv>=60?'disabled':''}>${it.id=='exp'&&pet?.lv>=60?'宠物已满级':'使用1颗'}</button>`:it.kind=='medicine'?'<div class="sub battle-help">在战斗页使用和调整自动用药，战斗补给在金币商店购买。</div>':it.kind=='book'?'<div class="sub battle-help">在宠物培养页打书。</div>':''}</div>`:'<div class="card sub">'+(entries.length?'选择上方物品查看详情。':'背包空空的，战斗掉落的道具会放在这里。')+'</div>'}${lootHistory()}`;
 }
+function skinShopView(){
+  const skin=SKINS.green,pet=get(S.sel),owned=S.skins.includes('green'),wearing=owned&&pet?.skin=='green';
+  return`<div class="card"><h3>🎨 宠物皮肤 · ${skin.n} ${owned?'<span class="tag">已解锁</span>':''}</h3><p class="skin-copy">“${skin.desc}”</p><div class="sub">一次解锁，全宠通用，可给多只宠物穿戴。纯外观，属性、五行和变异品质保持原样。</div><div class="row bag-picker">${S.pets.map(p=>`<button class="pc ${p.id===S.sel?'sel':''}" data-a="sel" data-v="${p.id}" aria-pressed="${p.id===S.sel}" ${B.run?'disabled':''}>${emo(p)} ${p.n}</button>`).join('')}</div>${pet?`<div class="skin-preview"><div>${petPortrait(p)}<small>原色</small></div><span aria-hidden="true">→</span><div>${petPortrait(p,'green')}<small>整成绿的</small></div></div><div class="sub" style="margin-bottom:10px">换装对象：${pet.n}${wearing?' · 已穿戴':''}</div>`:''}<div class="row">${owned?`<button class="b" data-a="skinequip" data-v="green" ${B.run||!pet||wearing?'disabled':''}>${wearing?'已穿戴':'穿上皮肤'}</button><button class="b alt" data-a="skinequip" data-v="original" ${B.run||!pet||!pet.skin?'disabled':''}>恢复原色</button>`:`<button class="b" data-a="skinbuy" data-v="green" ${B.run||!pet||S.gems<skin.price?'disabled':''}>解锁并穿上 · ${skin.price}💎</button>${S.gems<skin.price?'<span class="sub">钻石不足</span>':''}`}</div><div class="sub battle-help">解锁记录随当前浏览器存档保存；已解锁后换装免费。</div></div>`;
+}
 function shopView(){
   const coins=SHOP_CURRENCY=='coins',currency=coins?'coins':'gems',symbol=coins?'🪙':'💎',pet=get(S.sel);
   const goods=Object.entries(ITEMS).filter(([,it])=>it.currency===currency).map(([id,it])=>{const qty=['red','blue'].includes(id)?3:1;return{n:it.n,e:it.e,desc:it.desc,price:it.price*qty,qty,action:'buyitem',value:id+','+qty,stock:itemCount(id)}});
   if(coins)goods.push({n:'进化石',e:'🪨',desc:'用于宠物进化，购买后放入背包。',price:600,qty:1,action:'stone',stock:S.stone},{n:'性格药',e:'🧪',desc:'购买后立即重随 '+(pet?pet.n:'选中宠物')+' 的性格。',price:200,qty:1,action:'nat',needsPet:true});
   else goods.push({n:'特性胶囊',e:'💊',desc:'购买后立即重随 '+(pet?pet.n:'选中宠物')+' 的特性。',price:8,qty:1,action:'ab',needsPet:true});
-  return`<div class="card"><div class="shop-tabs">${[['coins','🪙 金币商店'],['gems','💎 钻石商店']].map(([id,n])=>`<button class="b ${SHOP_CURRENCY===id?'':'alt'}" data-a="shopcurrency" data-v="${id}" aria-pressed="${SHOP_CURRENCY===id}">${n}</button>`).join('')}</div><div class="sub">余额 ${symbol}${S[currency]}${B.run?' · 战斗中暂停购买':''}</div></div><div class="card"><div class="bag-grid">${goods.map(g=>`<div class="bag-item shop-product"><h3>${g.e} ${g.n}</h3><div class="sub">${g.desc}${g.stock!==undefined?'<br>持有 '+g.stock:''}</div><button class="b" data-a="${g.action}" ${g.value?`data-v="${g.value}"`:''} ${B.run||S[currency]<g.price||g.needsPet&&!pet?'disabled':''}>${g.needsPet?'购买并使用':'购买 ×'+g.qty} · ${g.price}${symbol}</button></div>`).join('')}</div></div><div class="card"><h3>${coins?'金币补充':'钻石补充'}</h3><div class="row">${coins?'<button class="b alt" data-a="ad" '+(B.run?'disabled':'')+'>看广告 +100🪙（模拟）</button>':'<button class="b alt" data-a="daily" '+(B.run?'disabled':'')+'>每日领取 +10💎</button><button class="b alt" data-a="iap" '+(B.run?'disabled':'')+'>60💎 · $0.99（演示，不扣费）</button>'}</div></div><details class="card"><summary>存档管理</summary><button class="b alt" style="margin-top:10px" data-a="reset" ${B.run?'disabled':''}>重置存档</button></details>`;
+  return`<div class="card"><div class="shop-tabs">${[['coins','🪙 金币商店'],['gems','💎 钻石商店']].map(([id,n])=>`<button class="b ${SHOP_CURRENCY===id?'':'alt'}" data-a="shopcurrency" data-v="${id}" aria-pressed="${SHOP_CURRENCY===id}">${n}</button>`).join('')}</div><div class="sub">余额 ${symbol}${S[currency]}${B.run?' · 战斗中暂停购买':''}</div></div>${coins?'':skinShopView()}<div class="card"><div class="bag-grid">${goods.map(g=>`<div class="bag-item shop-product"><h3>${g.e} ${g.n}</h3><div class="sub">${g.desc}${g.stock!==undefined?'<br>持有 '+g.stock:''}</div><button class="b" data-a="${g.action}" ${g.value?`data-v="${g.value}"`:''} ${B.run||S[currency]<g.price||g.needsPet&&!pet?'disabled':''}>${g.needsPet?'购买并使用':'购买 ×'+g.qty} · ${g.price}${symbol}</button></div>`).join('')}</div></div><div class="card"><h3>${coins?'金币补充':'钻石补充'}</h3><div class="row">${coins?'<button class="b alt" data-a="ad" '+(B.run?'disabled':'')+'>看广告 +100🪙（模拟）</button>':'<button class="b alt" data-a="daily" '+(B.run?'disabled':'')+'>每日领取 +10💎</button><button class="b alt" data-a="iap" '+(B.run?'disabled':'')+'>60💎 · $0.99（演示，不扣费）</button>'}</div></div><details class="card"><summary>存档管理</summary><button class="b alt" style="margin-top:10px" data-a="reset" ${B.run?'disabled':''}>重置存档</button></details>`;
 }
 function card(p,extra){return`<button class="pc ${p.q==2?'gold':''} ${S.sel===p.id?'sel':''}" data-a="${extra||'sel'}" data-v="${p.id}"><b>${emo(p)}</b>${p.n}<br>Lv${p.lv}${p.ev?' ★'+p.ev:''}${S.team.includes(p.id)?' ⭐':''}${p.job?' ⏳':''}${p.q?' <span class="tag">'+QN[p.q]+'</span>':''}${isGatherer(p)?' ⛏':''}</button>`}
 function aptitudeRange(p,i){
@@ -676,6 +684,17 @@ function act(a,v){
   if(a=='tab'){S.tab=v;REL=0}
   else if(a=='bagselect'){if(!inventoryEntries().some(it=>it.id===v))return;BAG_ITEM=v;render();return}
   else if(a=='shopcurrency'){if(!['coins','gems'].includes(v))return;SHOP_CURRENCY=v;render();return}
+  else if(a=='skinbuy'){
+    if(!Object.hasOwn(SKINS,v)||!p)return;
+    if(S.skins.includes(v))return toast('皮肤已解锁，可免费穿戴');
+    if(S.gems<SKINS[v].price)return toast('钻石不足');
+    S.gems-=SKINS[v].price;S.skins.push(v);p.skin=v;toast(p.n+'：这下绿了！');
+  }
+  else if(a=='skinequip'){
+    if(!p)return;
+    if(v=='original'){delete p.skin;toast('已恢复原色')}
+    else{if(!Object.hasOwn(SKINS,v)||!S.skins.includes(v))return toast('请先解锁皮肤');p.skin=v;toast('已穿上「'+SKINS[v].n+'」')}
+  }
   else if(a=='sel'){S.sel=+v;REL=0}
   else if(a=='aptinfo'){const [id,index]=String(v).split(',').map(Number),pet=get(id)||(LAST?.id===id?LAST:null);if(!pet||!Number.isInteger(index)||index<0||index>=pet.ap.length)return;APT_INFO=APT_INFO?.id===id&&APT_INFO.index===index?null:{id,index};render();return}
   else if(a=='autopot'){S.autoPotion=!S.autoPotion;toast('自动用药已'+(S.autoPotion?'开启，会消耗背包红蓝药':'关闭'))}
@@ -785,7 +804,7 @@ function act(a,v){
   save();render();
 }
 document.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(b)act(b.dataset.a,b.dataset.v)});
-load();initBag();S.xps=Array.isArray(S.xps)?S.xps:[null,null,null];while(S.xps.length<3)S.xps.push(null);if(S.xp&&!S.xps.some(Boolean))S.xps[0]=S.xp;S.xlogs=Array.isArray(S.xlogs)?S.xlogs:[[],[],[]];while(S.xlogs.length<3)S.xlogs.push([]);if(S.xlog?.length&&!S.xlogs[0]?.length)S.xlogs[0]=S.xlog;S.xsel??={z:0,d:0,ids:[]};S.xsel.car??=0;delete S.xp;delete S.xlog;
+load();initBag();initSkins();S.xps=Array.isArray(S.xps)?S.xps:[null,null,null];while(S.xps.length<3)S.xps.push(null);if(S.xp&&!S.xps.some(Boolean))S.xps[0]=S.xp;S.xlogs=Array.isArray(S.xlogs)?S.xlogs:[[],[],[]];while(S.xlogs.length<3)S.xlogs.push([]);if(S.xlog?.length&&!S.xlogs[0]?.length)S.xlogs[0]=S.xlog;S.xsel??={z:0,d:0,ids:[]};S.xsel.car??=0;delete S.xp;delete S.xlog;
 S.pets.forEach(p=>{
   p.el??=RI(0,4);p.xl??=[0,0,0];p.nd??=[];p.life??=100;p.job??=0;p.ev??=0;p.nat??=RI(0,5);p.ab??=RI(0,5);p.sk??=[];
   const hadLegacy=p.sk.some(k=>OLD_BADSK.includes(k));p.sk=p.sk.filter(k=>!OLD_BADSK.includes(k));
