@@ -84,7 +84,7 @@ const ZONES=[
  {n:'🌲 森林',lo:1,hi:15,sp:[2,4,5],el:[1,2],sk:['再生','治疗','定身','神佑'],baby:.12,mut:.02,cost:50,gem:10,need:1,rs:6,rare:.03,tag:'治疗与控制 · 灵鹿擅长治疗'},
  {n:'⛰️ 山地',lo:10,hi:30,sp:[3,1],el:[0,4],sk:['必杀','连击','反震','护佑'],baby:.08,mut:.012,cost:80,gem:12,need:4,rs:7,rare:.025,tag:'物理与防护 · 大海龟擅长护佑'},
  {n:'🌋 火山',lo:25,hi:50,sp:[0,3],el:[3,3,4],sk:['烈火','地狱烈火','必杀','连击'],baby:.05,mut:.008,cost:130,gem:15,need:8,rs:8,rare:.02,tag:'法术爆发 · 蛟龙与烈焰龙擅长火法'}];
-const TABS=[['pets','🐾 宠物'],['fight','⚔️ 战斗'],['catch','🌿 捕捉'],['fuse','🔮 炼化'],['idle','⏳ 挂机'],['bag','🎒 背包'],['quest','📋 任务'],['dex','📖 图鉴'],['shop','🛒 商店']];
+const TABS=[['pets','🐾 宠物'],['cultivate','📚 宠物培养'],['fight','⚔️ 战斗'],['catch','🌿 捕捉'],['fuse','🔮 炼化'],['idle','⏳ 挂机'],['bag','🎒 背包'],['quest','📋 任务'],['dex','📖 图鉴'],['shop','🛒 商店']];
 const R=(a,b)=>a+Math.random()*(b-a),RI=(a,b)=>Math.floor(R(a,b+1)),pick=a=>a[RI(0,a.length-1)],$=id=>document.getElementById(id);
 let S={coins:500,gems:30,last:0,off:null,team:[],dex:{},xps:[null,null,null],xsel:{car:0,z:0,d:0,ids:[]},xlogs:[[],[],[]],stone:0,shard:0,rep:'',dxc:[],badges:[],ng:0,floor:1,tower:0,hunt:{d:'',clears:0},farmOn:false,farmHold:false,mode:'main',dq:null,ac:[],cnt:{win:0,fuse:0,cap:0},bag:null,autoPotion:false,pets:[],active:0,nid:1,stage:1,maxStage:1,tab:'pets',sel:0,zone:0,mg:[],day:''};
 let B={run:0},LOGL=[],LAST=null,REL=0,AUTO_TIMER=null,FARM_TIMER=null;
@@ -297,8 +297,18 @@ function bookUseView(p,expanded=false){
     }).join('')}</div></div>`;
   }).join('');
 }
+function bookSourceView(){
+  return`<details class="sub battle-help"><summary>去哪刷技能书？</summary><div>普通战斗2%、Boss 12%概率掉一本。高级书仅Boss掉落，比同一书池中的单本低级书更稀有。</div>${REG.map((r,i)=>`<div><b>${r.n}（${i*5+1}–${i*5+5}关）</b>：${REGION_BOOKS[i].map(bookLabel).join('、')}</div>`).join('')}<div>无尽塔普通层掉低级书，塔主可掉两级书；悬赏按本场敌人五行决定书种。战斗页显示本场各书的实际掉率。</div></details>`;
+}
 function bookBagView(p){
-  return`<div class="card"><h3>📚 技能书</h3><div class="sub">使用对象：${p?p.n+' · Lv'+p.lv:'未选择'}（可在上方切换宠物）${B.run?' · 战斗中不能打书':''}</div><div class="sub" style="margin-top:8px;line-height:1.7">低级烈火：8蓝，高伤单体。高级地狱烈火：12蓝，低伤群体。两者可以同时保留，按敌人数选择使用；打书仍需要技能栏。</div>${bookUseView(p,true)}<details class="sub battle-help"><summary>去哪刷技能书？</summary><div>普通战斗2%、Boss 12%概率掉一本。高级书仅Boss掉落，比同一书池中的单本低级书更稀有。</div>${REG.map((r,i)=>`<div><b>${r.n}（${i*5+1}–${i*5+5}关）</b>：${REGION_BOOKS[i].map(bookLabel).join('、')}</div>`).join('')}<div>无尽塔普通层掉低级书，塔主可掉两级书；悬赏按本场敌人五行决定书种。战斗页显示本场各书的实际掉率。</div></details></div>`;
+  const owned=SKN.filter(k=>bookCount(k)>0);
+  return`<div class="card"><h3>📚 技能书</h3><div class="sub">共 ${owned.reduce((n,k)=>n+bookCount(k),0)} 本 · 在宠物培养页选择宠物并打书。</div><div class="row" style="margin-top:8px">${owned.map(k=>`<span class="tag" title="${SK[k]}">${bookBadge(k)} ${k} ×${bookCount(k)}</span>`).join('')||'<span class="sub">暂无技能书，战斗胜利有概率掉落。</span>'}</div><div class="row" style="margin-top:10px"><button class="b" data-a="tab" data-v="cultivate">前往宠物培养${p?' · '+p.n:''}</button></div>${bookSourceView()}</div>`;
+}
+function cultivateView(){
+  const p=get(S.sel),locked=B.run?'disabled':'',free=p?Math.max(0,slots(p)-p.sk.length):0;
+  return`<div class="card"><h3>📚 宠物培养</h3><div class="sub">选择宠物，再使用技能书学习技能。${B.run?'战斗中暂停切换培养对象和打书；连续自动战斗可在战斗页停止。':''}</div><div class="row bag-picker">${S.pets.map(q=>`<button class="pc ${q.q==2?'gold':''} ${q.id===S.sel?'sel':''}" data-a="sel" data-v="${q.id}" aria-pressed="${q.id===S.sel}" ${locked}><b>${emo(q)}</b>${q.n}<br>Lv${q.lv} · ${QN[q.q]}</button>`).join('')}</div></div>
+  ${p?`<div class="card"><h3>${emo(p)} ${p.n} · Lv${p.lv} <span class="tag ${p.q==2?'g':''}">${QN[p.q]}</span></h3><div class="sub">已有技能 ${p.sk.length}/${slots(p)} · 空余 ${free} 格</div><div class="row" style="margin-top:8px">${p.sk.map(k=>`<span class="tag ${BADSK.includes(k)?'bad':'g'}">${k}</span>`).join('')||'<span class="sub">尚未学会技能</span>'}${Array.from({length:free},()=>'<span class="tag">＋ 空技能栏</span>').join('')}</div><div class="sub battle-help">${p.sk.map(k=>`<div><b>${k}</b>：${SK[k]||'未知技能'}</div>`).join('')}</div><div class="${free?'sub':'intent'}" style="margin-top:10px">${free?'学习新技能会占用一个空技能栏。':'⚠️ 技能栏已满：打书会随机覆盖一个已有技能，包括高级技能。'}</div><div class="row" style="margin-top:10px"><button class="b alt" data-a="tab" data-v="pets">查看宠物详情</button></div></div>`:'<div class="card sub">请先选择一只宠物。</div>'}
+  <div class="card"><h3>打书 · ${p?p.n:'请选择宠物'}</h3>${bookUseView(p,true)}<div class="sub battle-help">低级烈火：8蓝，高伤单体。高级地狱烈火：12蓝，低伤群体。两者可以同时保留，各占一个技能栏。</div>${bookSourceView()}</div>`;
 }
 function addItem(id,n){if(ITEMS[id]&&Number.isInteger(n)&&n>0)S.bag[id]=itemCount(id)+n}
 function buyItem(id,n){
@@ -355,7 +365,7 @@ function detail(p){
   <div style="margin-top:8px">技能 (${p.sk.length}/${sl}): ${p.sk.map(k=>`<span class="tag ${BADSK.includes(k)?'bad':'g'}" title="${SK[k]}">${k}</span>`).join('')||'<span class="sub">无</span>'}</div>
   <details class="sub battle-help"><summary>查看技能效果 · 魔法上限 ${maxMana({...p,at:p.at.map((v,i)=>v+draft[i])})}</summary>${p.sk.map(k=>`<div><b>${k}</b>：${SK[k]||'未知技能'}</div>`).join('')}<div>魔力加点同时提升法攻与魔法上限。每场开始时气血和魔法补满。</div></details>
   ${p.sk.some(k=>BADSK.includes(k))?`<div class="sub" style="margin-top:6px">红色弱点技能会使对应五行的来袭伤害额外增加20%，并占用技能栏；可花150🪙净化。</div><div class="row">${p.sk.filter(k=>BADSK.includes(k)).map(k=>`<button class="b alt" data-a="purge" data-v="${k}">净化${k} 150🪙</button>`).join('')}</div>`:''}
-  ${bookUseView(p)}
+  <div class="row" style="margin-top:10px"><button class="b" data-a="tab" data-v="cultivate">📚 宠物培养 · 打书</button></div>
   ${evoHtml(p)}
   <div class="row" style="margin-top:8px"><button class="b alt" data-a="useitem" data-v="life" ${itemCount('life')?'':'disabled'}>长寿丹 ×${itemCount('life')} · 寿命+100</button><button class="b alt" data-a="tab" data-v="bag">打开背包</button></div>
   <div class="row" style="margin-top:10px"><button class="b" data-a="act">${S.team.includes(p.id)?'下阵':'上阵'}</button><button class="b alt" data-a="feed">喂食 15🪙</button><button class="b alt" data-a="wash">洗点 20🪙</button><button class="b alt" data-a="rel">${REL===p.id?'确认放生?':'放生'}</button></div></div>`;
@@ -381,6 +391,7 @@ function battleArena(F,T,cur){
 function view(){
   const t=S.tab,p=get(S.sel);
   if(t=='pets')return`<div class="card"><h3>我的宠物 (${S.pets.length}/${PET_CAP})</h3><div class="row">${S.pets.map(q=>card(q)).join('')}</div></div>`+(p?detail(p):'');
+  if(t=='cultivate')return cultivateView();
   if(t=='idle')return idleView();
   if(t=='bag')return bagView();
   if(t=='dex')return dexView();
