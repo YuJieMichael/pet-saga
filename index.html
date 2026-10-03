@@ -42,7 +42,7 @@ button.b:disabled{opacity:.5}
 .tag.bad{background:#a34242;color:#fff}
 .fusion-result{border:2px solid var(--gold)}.fusion-rating{font-size:18px;font-weight:700;margin:8px 0}.fusion-table{width:100%;border-collapse:collapse;font-size:12px;margin:10px 0}.fusion-table th,.fusion-table td{padding:7px 3px;border-bottom:1px solid var(--line);text-align:right}.fusion-table th:first-child,.fusion-table td:first-child{text-align:left}.fusion-option{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:12px;cursor:pointer}.fusion-option input{width:18px;height:18px;accent-color:var(--acc)}
 .formation{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px 0}.formation-slot{min-width:0;background:var(--bg);border:2px dashed var(--line);border-radius:12px;padding:8px 5px;text-align:center}.formation-slot.filled{border-style:solid}.formation-slot .pc{width:100%;min-width:0;border:0;background:transparent;padding:5px 0}.formation-slot .slot-actions{display:flex;flex-direction:column;gap:5px;margin-top:8px}.formation-slot button.b{font-size:11px;padding:7px 3px}.roster-pet{position:relative;min-width:0;user-select:none;-webkit-user-select:none}.roster-pet>.pc{width:100%;height:100%;min-width:0}.roster-pet [data-drag-handle]{display:block;width:100%;margin-top:4px;border:1px solid var(--line);border-radius:7px;background:var(--card);color:var(--sub);font-size:11px;padding:5px;touch-action:none;cursor:grab}.roster-pet [data-drag-handle]:disabled{opacity:.4;cursor:default}.roster-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;max-height:300px;overflow-y:auto;padding:5px}.roster-grid .roster-pet>.pc{height:auto;min-height:90px}.formation-slot.drag-over,[data-team-bench].drag-over{outline:2px solid var(--acc);outline-offset:2px}.roster-ghost{position:fixed;z-index:1000;pointer-events:none;background:var(--card);border:2px solid var(--acc);border-radius:12px;padding:10px;box-shadow:0 5px 18px #0003;transform:translate(-50%,-120%);font-size:14px}.roster-ghost .pet-sprite{font-size:30px;vertical-align:middle}
-.bag-filters{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.bag-filters button.b{padding:7px 9px;font-size:12px}.inventory-slot.pack{background:var(--card);border-color:var(--gold)}.pack-result{border:1px solid var(--gold)}
+.bag-filters{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.bag-filters button.b{padding:7px 9px;font-size:12px}.inventory-slot.pack{background:var(--card);border-color:var(--gold)}
 .pet-sprite{display:inline-block}.pet-sprite.skin-green{filter:grayscale(1) sepia(1) saturate(7) hue-rotate(65deg)}.skin-preview{display:flex;align-items:center;justify-content:center;gap:24px;margin:16px 0;padding:16px;border-radius:12px;background:var(--bg);text-align:center}.skin-preview .pet-sprite{font-size:54px;line-height:1.25}.skin-preview small{display:block;margin-top:6px;color:var(--sub)}.skin-copy{font-size:15px;line-height:1.7;margin:10px 0;color:var(--ink)}
 .book-grade{display:inline-block;padding:2px 6px;border-radius:6px;font-size:11px;font-weight:700;white-space:nowrap}.book-grade.low{background:#dceafa;color:#245078}.book-grade.high{background:#f6dda0;color:#6b4300}.book-group{margin-top:12px}.book-item.high{border:1px solid var(--gold)}.book-item.low{border:1px solid var(--line)}
 .hb{height:10px;background:var(--line);border-radius:6px;overflow:hidden}
@@ -57,6 +57,7 @@ button.b:disabled{opacity:.5}
 .team{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:4px 0 8px}.fc{background:var(--bg);border:2px solid transparent;border-radius:12px;padding:6px 2px;text-align:center;font-size:11px}.fc b{font-size:30px;display:block}.fc.dead{opacity:.35}.fc.cur{border-color:var(--gold)}.fc.tgt{border-color:var(--acc);cursor:pointer;animation:pl 1s infinite}@keyframes pl{50%{opacity:.6}}
 #toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#000d;color:#fff;padding:9px 16px;border-radius:20px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90%;text-align:center}
 #toast.show{opacity:1}
+#pack-notice{box-sizing:border-box;position:fixed;z-index:1100;left:50%;top:35%;transform:translate(-50%,-50%);width:min(340px,calc(100vw - 32px));padding:18px;border:2px solid var(--gold);border-radius:16px;background:var(--card);color:var(--ink);box-shadow:0 12px 40px #0004;text-align:center;pointer-events:none}#pack-notice h3{margin:0 0 10px}#pack-notice .pack-rewards{line-height:1.8;font-size:14px}#pack-notice .sub{margin-top:8px}
 </style>
 </head>
 <body>
@@ -67,6 +68,7 @@ button.b:disabled{opacity:.5}
   <div id="main"></div>
 </div>
 <div id="toast"></div>
+<div id="pack-notice" role="status" aria-live="polite" aria-atomic="true" hidden></div>
 <script>
 const SP=[{e:'🐲',n:'蛟龙',b:[1500,1100,3800,1500,1200]},{e:'🐢',n:'大海龟',b:[1000,1600,4600,1100,900]},{e:'🦝',n:'狸',b:[1100,1000,3400,2000,1500]},{e:'🐯',n:'老虎',b:[1600,1200,4000,1000,1300]},{e:'🦅',n:'飞燕',b:[1300,900,3300,1300,1700]},{e:'🐸',n:'巨蛙',b:[1200,1400,4800,1200,1000]},{e:'🦌',n:'灵鹿',b:[1300,1400,4600,2200,1700]},{e:'🦁',n:'金狮',b:[1900,1500,4600,1200,1500]},{e:'🐉',n:'烈焰龙',b:[1800,1300,4200,2000,1600]}];
 const ELS=['金','木','水','火','土'],ELC=['🟡','🟢','🔵','🔴','🟤'],BEAT=[1,4,3,0,2],ELM=(x,y)=>BEAT[x]==y?1.3:BEAT[y]==x?.75:1;
@@ -105,7 +107,7 @@ const pointDraft=p=>POINT_DRAFT.get(p.id)||[0,0,0,0,0];
 const APT_BANDS=[[.82,.95],[.96,1.06],[1.16,1.28]],EV_AP=[1.12,1.1];
 let APT_INFO=null;
 let OFF_AD=false,RETIRED_LIFE_REFUND=0;
-let BAG_ITEM=null,BAG_FILTER='all',PACK_RESULT=null,SHOP_CURRENCY='coins';
+let BAG_ITEM=null,BAG_FILTER='all',PACK_NOTICE_TIMER=null,SHOP_CURRENCY='coins';
 let ROSTER_DRAG=null,ROSTER_NO_CLICK_UNTIL=0;
 let FUSION_RESULT_OPEN=false,WASH_CONFIRM=null;
 const WASH_ITEMS={dew:{n:'金柳露',e:'🧴',price:225,currency:'coins',desc:'洗炼野生／宝宝宠物；野生洗为宝宝。重随资质、成长与技能，保留等级和进化。'},mutDew:{n:'高级金柳露',e:'⚗️',price:15,currency:'gems',desc:'专用于变异宠物，保留变异身份。重随资质、成长与技能，保留等级和进化。'}};
@@ -341,13 +343,19 @@ function buyPack(id){
   if(S[pack.currency]<pack.price)return toast(pack.currency=='coins'?'金币不足':'钻石不足');
   S[pack.currency]-=pack.price;S.bag.packs[id]=packCount(id)+1;toast(pack.n+'已放入背包');
 }
+function showPackNotice(name,count,rewards){
+  const notice=$('pack-notice');clearTimeout(PACK_NOTICE_TIMER);
+  notice.innerHTML=`<h3>🎉 ${name} ×${count}</h3><div class="pack-rewards">${rewards.map(lootItemText).join('<br>')}</div><div class="sub">奖励已放入背包 · 5秒后自动关闭</div>`;
+  notice.hidden=false;
+  PACK_NOTICE_TIMER=setTimeout(()=>{notice.hidden=true;notice.replaceChildren();PACK_NOTICE_TIMER=null},5000);
+}
 function openPack(id,requested){
   if(B.run||!Object.hasOwn(PACKS,id)||![1,5].includes(requested))return;
   const count=Math.min(requested,packCount(id));if(!count)return toast('没有这个礼包');
   const pack=PACKS[id],rewards=[];
   if(pack.items){for(const [item,qty] of Object.entries(pack.items)){addItem(item,qty*count);rewards.push({id:item,qty:qty*count})}}
   else{const pool=SKN.filter(k=>bookGrade(k)=='low');for(let i=0;i<count;i++){const skill=pick(pool);S.bag.books[skill]=bookCount(skill)+1;const found=rewards.find(x=>x.skill===skill);if(found)found.qty++;else rewards.push({id:'book',skill,qty:1})}}
-  S.bag.packs[id]-=count;PACK_RESULT={name:pack.n,count,rewards};toast('礼包已打开，奖励已放入背包');
+  S.bag.packs[id]-=count;showPackNotice(pack.n,count,rewards);
 }
 function bookUseView(p,expanded=false){
   const owned=SKN.filter(k=>bookCount(k)>0);
@@ -429,7 +437,6 @@ function inventoryEntries(){
 function bagView(){
   const all=inventoryEntries(),entries=all.filter(x=>BAG_FILTER=='all'||x.kind===BAG_FILTER),it=entries.find(x=>x.id===BAG_ITEM),capacity=Math.max(16,Math.ceil(entries.length/4)*4);
   return`<div class="card"><h3>🎒 背包 <span class="sub">${all.length} 种物品</span></h3><div class="sub">同类叠加 · 点格子查看和使用 · 自动扩展格子</div><div class="bag-filters">${BAG_CATEGORIES.map(([id,name])=>`<button class="b ${BAG_FILTER===id?'':'alt'}" data-a="bagfilter" data-v="${id}" aria-pressed="${BAG_FILTER===id}">${name} ${id=='all'?all.length:all.filter(x=>x.kind===id).length}</button>`).join('')}</div><div class="inventory-grid">${entries.map(x=>`<button class="inventory-slot ${x.kind=='pack'?'pack':''} ${x.grade||''} ${it?.id===x.id?'selected':''}" data-a="bagselect" data-v="${x.id}" aria-label="${x.grade?BOOK_GRADES[x.grade].name:''}${x.n}，数量${x.qty}" aria-pressed="${it?.id===x.id}">${x.grade?`<span class="item-tier">${BOOK_GRADES[x.grade].name}</span>`:''}<span class="item-count">×${x.qty}</span><span class="item-icon" aria-hidden="true">${x.e}</span><span class="item-name">${x.n}</span></button>`).join('')}${Array.from({length:capacity-entries.length},()=>'<div class="inventory-slot empty" aria-hidden="true"></div>').join('')}</div></div>
-  ${PACK_RESULT?`<div class="card pack-result" role="status"><h3>🎉 已打开${PACK_RESULT.name} ×${PACK_RESULT.count}</h3><div class="sub battle-help">${PACK_RESULT.rewards.map(lootItemText).join('<br>')}</div><div class="row" style="margin-top:8px"><button class="b alt" data-a="packresultclose">收好奖励</button></div></div>`:''}
   ${it?bagDetailView(it):`<div class="card sub">${entries.length?'选择上方物品查看详情。':BAG_FILTER=='pack'?'暂无礼包，可从战斗掉落或商店获得。':'这个分类暂时没有物品。'}</div>`}<details><summary class="sub">最近战斗掉落</summary>${lootHistory()}</details>`;
 }
 function bagDetailView(it){
@@ -927,7 +934,7 @@ function claim(){
   S.off=null;S.last=Date.now();save();toast('离线收益已领取'+(rewardBook?'，获得'+bookLabel(rewardBook)+'技能书 ×1':''));
 }
 function act(a,v){
-  if(B.run&&!['tab','battlespeed','cmd','auto','farm','tgt','ally','dq','ac','autopot','bagmed','aptinfo','offad','potrule','bagselect','bagfilter','packresultclose','shopcurrency','fuseresultopen','fuseresultclose'].includes(a))return;
+  if(B.run&&!['tab','battlespeed','cmd','auto','farm','tgt','ally','dq','ac','autopot','bagmed','aptinfo','offad','potrule','bagselect','bagfilter','shopcurrency','fuseresultopen','fuseresultclose'].includes(a))return;
   const p=get(S.sel);
   if(a!=='washapply')WASH_CONFIRM=null;
   if(a=='tab'){S.tab=v;REL=0}
@@ -955,7 +962,6 @@ function act(a,v){
   else if(a=='teamremove'){removeTeamPet(Number(v));return}
   else if(a=='bagselect'){if(!inventoryEntries().some(it=>it.id===v))return;BAG_ITEM=v;render();return}
   else if(a=='bagfilter'){if(!BAG_CATEGORIES.some(([id])=>id===v))return;BAG_FILTER=v;BAG_ITEM=null;render();return}
-  else if(a=='packresultclose'){PACK_RESULT=null;render();return}
   else if(a=='buypack'){buyPack(v)}
   else if(a=='openpack'){const [id,n]=String(v).split(',');openPack(id,Number(n))}
   else if(a=='craftpotion'){const [id,mode]=String(v).split(',');craftPotion(id,mode)}
