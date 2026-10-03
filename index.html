@@ -74,7 +74,8 @@ const intent=f=>!f.boss?'':f.stun?'被定身：下次行动跳过':f.phase=='bur
 const MEDICINE={h:'red',u:'blue'};
 const targetSide=c=>c=='a'?'enemy':MEDICINE[c]?'ally':CAST[c]?.target;
 const ITEMS={red:{n:'红药',e:'🔴',price:10,currency:'coins',desc:'战斗中恢复一名存活队友40%气血，占用一次行动。'},blue:{n:'蓝药',e:'🔵',price:15,currency:'coins',desc:'战斗中恢复一名存活队友40%魔法，占用一次行动。'},exp:{n:'经验丹',e:'✨',price:100,currency:'coins',desc:'让选中的宠物升1级，满级宠物不能使用。'},life:{n:'长寿丹',e:'🌿',price:20,currency:'gems',desc:'为选中的宠物增加100寿命。'}};
-const LOOT=[{id:'red',n:'红药',e:'🔴',rate:[.25,.5],qty:[1,2]},{id:'blue',n:'蓝药',e:'🔵',rate:[.2,.4],qty:[1,2]},{id:'exp',n:'经验丹',e:'✨',rate:[.01,.04],qty:[1,1]},{id:'life',n:'长寿丹',e:'🌿',rate:[.003,.01],qty:[1,1]},{id:'shard',n:'进化石碎片',e:'🧩',rate:[.05,.2],qty:[1,2]},{id:'stone',n:'进化石',e:'🪨',rate:[.002,.03],qty:[1,1]}];
+const POTION_PARTS={redPart:{n:'红药碎片',e:'🟥',target:'red',need:5,rate:[.45,.75]},bluePart:{n:'蓝药碎片',e:'🟦',target:'blue',need:5,rate:[.35,.65]}};
+const LOOT=[{id:'red',n:'红药',e:'🔴',rate:[.25,.5],qty:[1,2]},{id:'blue',n:'蓝药',e:'🔵',rate:[.2,.4],qty:[1,2]},{id:'exp',n:'经验丹',e:'✨',rate:[.01,.04],qty:[1,1]},{id:'life',n:'长寿丹',e:'🌿',rate:[.003,.01],qty:[1,1]},{id:'shard',n:'进化石碎片',e:'🧩',rate:[.05,.2],qty:[1,2]},{id:'stone',n:'进化石',e:'🪨',rate:[.002,.03],qty:[1,1]},...Object.entries(POTION_PARTS).map(([id,p])=>({id,n:p.n,e:p.e,rate:p.rate,qty:[1,3]}))];
 const BADSK=ELS.map(e=>'弱'+e),OLD_BADSK=['虚弱','迟钝','薄甲'],WEAK_SP=[0,1,5,8],weakFor=el=>'弱'+ELS[BEAT.indexOf(el)],SKN=Object.keys(SK).filter(k=>!BADSK.includes(k)),AN=['攻击','防御','体力','法力','速度'],TN=['体质','魔力','力量','耐力','敏捷'],QN=['野生','宝宝','变异'];
 const BOOK_RATE=[.02,.12],BOSS_BOOKS=['神佑','地狱烈火'];
 const BOOK_GRADES={low:{name:'低级',weight:3},high:{name:'高级',weight:1}};
@@ -293,7 +294,7 @@ const normalizePotionThreshold=v=>v==null||!Number.isFinite(Number(v))?20:Math.m
 function initBag(){
   const valid=S.bag&&typeof S.bag=='object'&&!Array.isArray(S.bag);
   if(!valid)S.bag={red:S.pot===undefined?3:S.pot,blue:3,exp:0,life:0};
-  for(const key of Object.keys(ITEMS)){const n=Number(S.bag[key]);S.bag[key]=Number.isFinite(n)?Math.max(0,Math.floor(n)):0}
+  for(const key of [...Object.keys(ITEMS),...Object.keys(POTION_PARTS)]){const n=Number(S.bag[key]);S.bag[key]=Number.isFinite(n)?Math.max(0,Math.floor(n)):0}
   const books=S.bag.books&&typeof S.bag.books=='object'&&!Array.isArray(S.bag.books)?S.bag.books:{};
   S.bag.books=Object.fromEntries(SKN.map(k=>{const n=Number(books[k]);return[k,Number.isFinite(n)?Math.max(0,Math.floor(n)):0]}));
   const packs=S.bag.packs&&typeof S.bag.packs=='object'&&!Array.isArray(S.bag.packs)?S.bag.packs:{};
@@ -340,7 +341,15 @@ function cultivateView(){
   ${p?`<div class="card"><h3>${emo(p)} ${p.n} · 技能 ${p.sk.length}/${slots(p)}</h3><div class="sub battle-help">${p.sk.map(k=>`<div><span class="tag ${BADSK.includes(k)?'bad':'g'}">${k}</span> ${SK[k]||'未知技能'}</div>`).join('')||'尚未学会技能'}</div><div class="${free?'sub':'intent'}" style="margin-top:10px">${free?'空余 '+free+' 格，学习新技能占用一格。':'⚠️ 技能栏已满：打书会随机覆盖一个已有技能，包括高级技能。'}</div></div>`:'<div class="card sub">请先选择一只宠物。</div>'}
   <div class="card"><h3>可用技能书</h3>${bookUseView(p,true)}${bookSourceView()}</div>`;
 }
-function addItem(id,n){if(ITEMS[id]&&Number.isInteger(n)&&n>0)S.bag[id]=itemCount(id)+n}
+function addItem(id,n){if((Object.hasOwn(ITEMS,id)||Object.hasOwn(POTION_PARTS,id))&&Number.isInteger(n)&&n>0)S.bag[id]=itemCount(id)+n}
+function craftPotion(id,mode){
+  if(B.run||!Object.hasOwn(POTION_PARTS,id)||!['one','all'].includes(mode))return;
+  const part=POTION_PARTS[id],available=Math.floor(itemCount(id)/part.need);
+  if(available<1)return toast('需要'+part.need+'个'+part.n);
+  const count=mode=='all'?available:1;
+  S.bag[id]-=count*part.need;addItem(part.target,count);
+  toast('合成'+ITEMS[part.target].n+' ×'+count+'，已放入背包补给');
+}
 function buyItem(id,n){
   const item=ITEMS[id];if(!item||![1,3].includes(n))return;
   const cost=item.price*n;if(S[item.currency]<cost)return toast(item.currency=='coins'?'金币不足':'钻石不足');
@@ -362,6 +371,7 @@ function inventoryEntries(){
   return[
     ...Object.entries(PACKS).map(([key,p])=>({id:'pack:'+key,...p,qty:packCount(key),kind:'pack',packId:key})),
     ...Object.entries(ITEMS).map(([id,it])=>({id,...it,qty:itemCount(id),kind:['red','blue'].includes(id)?'medicine':'growth'})),
+    ...Object.entries(POTION_PARTS).map(([id,p])=>({id,...p,qty:itemCount(id),kind:'material',desc:p.need+'个'+p.n+'可合成1瓶'+ITEMS[p.target].n+'，不消耗金币。普通战斗与Boss均有概率掉落。'})),
     {id:'stone',n:'进化石',e:'🪨',qty:S.stone,kind:'material',desc:'用于宠物进化，达到条件后在首页使用。'},
     {id:'shard',n:'进化石碎片',e:'🧩',qty:S.shard,kind:'material',desc:'每集齐5片自动合成1颗进化石。'},
     ...SKN.map(k=>({id:'book:'+k,n:k,e:'📚',qty:bookCount(k),kind:'book',grade:bookGrade(k),desc:SK[k]}))
@@ -377,7 +387,11 @@ function bagDetailView(it){
   const pet=get(S.sel);let action='';
   if(it.kind=='growth')action=`<div class="sub" style="margin-top:10px">使用对象：${pet?pet.n+' · Lv'+pet.lv:'请选择宠物'}${B.run?' · 战斗中暂不可使用':''}</div><div class="row bag-picker">${S.pets.map(p=>`<button class="pc ${p.id===S.sel?'sel':''}" data-a="sel" data-v="${p.id}" ${B.run?'disabled':''}>${emo(p)} ${p.n}<br>Lv${p.lv}</button>`).join('')}</div><button class="b" style="margin-top:10px" data-a="useitem" data-v="${it.id}" ${B.run||!pet||it.id=='exp'&&pet.lv>=60?'disabled':''}>${it.id=='exp'&&pet?.lv>=60?'宠物已满级':'使用1颗'}</button>`;
   else if(it.kind=='pack')action=`${it.packId=='books'?`<details class="sub battle-help"><summary>可能获得的技能书</summary>${SKN.filter(k=>bookGrade(k)=='low').join('、')}<br>每本概率 1/${SKN.filter(k=>bookGrade(k)=='low').length}。</details>`:''}<div class="row" style="margin-top:10px"><button class="b" data-a="openpack" data-v="${it.packId},1" ${B.run?'disabled':''}>打开1个</button>${it.qty>1?`<button class="b alt" data-a="openpack" data-v="${it.packId},5" ${B.run?'disabled':''}>打开${Math.min(5,it.qty)}个</button>`:''}</div>${B.run?'<div class="sub">战斗结束后可打开礼包。</div>':''}`;
-  else if(it.kind=='medicine')action='<div class="sub battle-help">在战斗页使用和调整自动用药，战斗补给在金币商店购买。</div>';
+  else if(Object.hasOwn(POTION_PARTS,it.id)){
+    const part=POTION_PARTS[it.id],count=Math.floor(it.qty/part.need),remainder=it.qty%part.need;
+    action=`<div class="sub battle-help">${count?'可合成 '+count+' 瓶，全部合成后剩余 '+remainder+' 个碎片。':'还差 '+(part.need-it.qty)+' 个碎片。'}${B.run?'<br>战斗结束后可合成。':''}</div><div class="row" style="margin-top:10px"><button class="b" data-a="craftpotion" data-v="${it.id},one" ${B.run||!count?'disabled':''}>合成1瓶</button><button class="b alt" data-a="craftpotion" data-v="${it.id},all" ${B.run||!count?'disabled':''}>全部合成${count?' · '+count+'瓶':''}</button></div>`;
+  }
+  else if(it.kind=='medicine')action='<div class="sub battle-help">在战斗页使用和调整自动用药；金币商店可购买，也可用同类碎片合成。</div>';
   else if(it.kind=='book')action='<div class="sub battle-help">在宠物培养页打书。</div>';
   return`<div class="card"><h3>${it.e} ${it.n} ×${it.qty} ${it.grade?bookBadge(it.n):''}</h3><div class="sub battle-help">${it.desc}</div>${action}</div>`;
 }
@@ -724,6 +738,7 @@ function act(a,v){
   else if(a=='packresultclose'){PACK_RESULT=null;render();return}
   else if(a=='buypack'){buyPack(v)}
   else if(a=='openpack'){const [id,n]=String(v).split(',');openPack(id,Number(n))}
+  else if(a=='craftpotion'){const [id,mode]=String(v).split(',');craftPotion(id,mode)}
   else if(a=='shopcurrency'){if(!['coins','gems'].includes(v))return;SHOP_CURRENCY=v;render();return}
   else if(a=='skinbuy'){
     if(!Object.hasOwn(SKINS,v)||!p)return;
