@@ -14,9 +14,11 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,"P
 #app{width:100%;max-width:460px;padding:12px}
 .top{display:flex;gap:8px;margin-bottom:8px}
 .pill{flex:1;background:var(--card);border-radius:12px;padding:8px;font-weight:700;text-align:center}
-.tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-bottom:10px}
-.tabs button{border:0;border-radius:10px;padding:9px 0;background:var(--card);color:var(--ink);font-size:10px;cursor:pointer}
+.tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:10px}
+.tabs button{border:0;border-radius:10px;padding:10px 0;background:var(--card);color:var(--ink);font-size:11px;cursor:pointer;min-height:40px}
 .tabs button.on{background:var(--acc);color:#fff;font-weight:700}
+.tabs button.nav-main{grid-column:span 2;display:flex;align-items:center;justify-content:center;gap:10px;min-height:64px;padding:10px;border:1px solid var(--line);border-radius:14px;text-align:left}
+.nav-main .nav-icon{font-size:28px;line-height:1}.nav-main strong{display:block;font-size:14px}.nav-main small{display:block;font-size:11px;font-weight:400;margin-top:3px;color:var(--sub)}.nav-main.on small{color:inherit}.tabs button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .card{background:var(--card);border-radius:14px;padding:12px;margin-bottom:10px}
 .card h3{margin:0 0 8px;font-size:15px}
 .row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
@@ -84,7 +86,7 @@ const ZONES=[
  {n:'🌲 森林',lo:1,hi:15,sp:[2,4,5],el:[1,2],sk:['再生','治疗','定身','神佑'],baby:.12,mut:.02,cost:50,gem:10,need:1,rs:6,rare:.03,tag:'治疗与控制 · 灵鹿擅长治疗'},
  {n:'⛰️ 山地',lo:10,hi:30,sp:[3,1],el:[0,4],sk:['必杀','连击','反震','护佑'],baby:.08,mut:.012,cost:80,gem:12,need:4,rs:7,rare:.025,tag:'物理与防护 · 大海龟擅长护佑'},
  {n:'🌋 火山',lo:25,hi:50,sp:[0,3],el:[3,3,4],sk:['烈火','地狱烈火','必杀','连击'],baby:.05,mut:.008,cost:130,gem:15,need:8,rs:8,rare:.02,tag:'法术爆发 · 蛟龙与烈焰龙擅长火法'}];
-const TABS=[['pets','🐾 宠物'],['cultivate','📚 宠物培养'],['fight','⚔️ 战斗'],['catch','🌿 捕捉'],['fuse','🔮 炼化'],['idle','⏳ 挂机'],['bag','🎒 背包'],['quest','📋 任务'],['dex','📖 图鉴'],['shop','🛒 商店']];
+const TABS=[['pets','🏠 首页'],['bag','🎒 背包'],['cultivate','📚 宠物培养'],['fight','⚔️ 战斗'],['catch','🌿 捕捉'],['fuse','🔮 炼化'],['idle','⏳ 挂机'],['quest','📋 任务'],['dex','📖 图鉴'],['shop','🛒 商店']];
 const R=(a,b)=>a+Math.random()*(b-a),RI=(a,b)=>Math.floor(R(a,b+1)),pick=a=>a[RI(0,a.length-1)],$=id=>document.getElementById(id);
 let S={coins:500,gems:30,last:0,off:null,team:[],dex:{},xps:[null,null,null],xsel:{car:0,z:0,d:0,ids:[]},xlogs:[[],[],[]],stone:0,shard:0,rep:'',dxc:[],badges:[],ng:0,floor:1,tower:0,hunt:{d:'',clears:0},farmOn:false,farmHold:false,mode:'main',dq:null,ac:[],cnt:{win:0,fuse:0,cap:0},bag:null,autoPotion:false,pets:[],active:0,nid:1,stage:1,maxStage:1,tab:'pets',sel:0,zone:0,mg:[],day:''};
 let B={run:0},LOGL=[],LAST=null,REL=0,AUTO_TIMER=null,FARM_TIMER=null;
@@ -415,7 +417,7 @@ function view(){
 }
 function render(){
   $('coins').textContent='🪙 '+S.coins;$('gems').textContent='💎 '+S.gems;
-  $('tabs').innerHTML=TABS.map(t=>`<button class="${S.tab===t[0]?'on':''}" data-a="tab" data-v="${t[0]}">${t[1]}${(t[0]=='idle'&&S.off)||(t[0]=='quest'&&claimable())?'🔴':''}</button>`).join('');
+  $('tabs').innerHTML=TABS.map(t=>{const main=t[0]=='pets'||t[0]=='bag',home=t[0]=='pets';return`<button class="${main?'nav-main ':''}${S.tab===t[0]?'on':''}" data-a="tab" data-v="${t[0]}" ${S.tab===t[0]?'aria-current="page"':''}>${main?`<span class="nav-icon" aria-hidden="true">${home?'🏠':'🎒'}</span><span><strong>${home?'首页':'背包'}</strong><small>${home?'宠物与队伍':'道具与技能书'}</small></span>`:t[1]}${(t[0]=='idle'&&S.off)||(t[0]=='quest'&&claimable())?'🔴':''}</button>`}).join('');
   $('main').innerHTML=view();
 }
 function addPet(p){if(S.pets.length>=PET_CAP){toast('宠物栏已满，请先放生');return false}S.pets.push(p);dx(p);return true}
