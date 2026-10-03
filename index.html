@@ -224,7 +224,7 @@ function expView(){
   <div class="sub" style="margin:6px 0">预计事件成功率：${sel.ids.length?Math.round(Math.min(.95,.3+.45*pr)*100)+'%':'—'} · 采矿金币加成 +${bonus}%（带 ${ELC[ce]}${ELS[ce]}系宠物克制本区域，更稳）</div>
   <button class="b" data-a="xs">出发</button>${L}</div>`;
 }
-const capH=()=>8+S.badges.length+2*S.ng;
+const capH=()=>12+S.badges.length+2*S.ng;
 const towerOpen=()=>S.maxStage>=31||S.ng>0;
 function dqRoll(){const d=new Date().toDateString();if(!S.dq||S.dq.d!==d)S.dq={d,p:{},c:[]}}
 function qp(k){dqRoll();S.dq.p[k]=(S.dq.p[k]||0)+1;if(S.cnt[k]!==undefined)S.cnt[k]++}
@@ -276,7 +276,7 @@ function grantBattleLoot(context){
 function packDropOdds(tier){return Object.values(PACKS).filter(p=>p.rate[tier]>0).map(p=>`<div>${p.e} ${p.n} ×1 · ${+(p.rate[tier]*100).toFixed(1)}%</div>`).join('')}
 function lootOdds(foes){
   const tier=foes.some(f=>f.boss)?1:0,pool=bookPool(lootContext(foes)),weight=pool.reduce((sum,k)=>sum+bookWeight(k),0);
-  return`<details class="sub battle-help"><summary>🎁 查看${tier?'Boss':'普通战斗'}掉落概率</summary><div>胜利后每种道具独立判定一次，可能掉多种，也可能没有；参战数量不影响掉落。连续自动战斗也会收取。</div>${LOOT.map(d=>`<div>${d.e} ${d.n} ×${d.qty[tier]} · ${+(d.rate[tier]*100).toFixed(1)}%</div>`).join('')}${packDropOdds(tier)}<div>📚 直接掉落技能书 ×1 · 总掉率 ${BOOK_RATE[tier]*100}%</div>${pool.map(k=>`<div>${bookBadge(k)} ${k} · 每场约 ${(BOOK_RATE[tier]*bookWeight(k)/weight*100).toFixed(2)}%</div>`).join('')}<div>高级书仅Boss掉落，同一书池里比单本低级书更稀有。本表是额外随机掉落，关卡固定奖励会另外结算。</div></details>`;
+  return`<details class="sub battle-help"><summary>🎁 查看${tier?'Boss':'普通战斗'}掉落概率</summary><div>胜利后每种道具独立判定一次，可能掉多种，也可能没有；参战数量不影响掉落。连续自动战斗也会收取。</div>${LOOT.map(d=>`<div>${d.e} ${d.n} ×${d.qty[tier]} · ${+(d.rate[tier]*100).toFixed(1)}%</div>`).join('')}${packDropOdds(tier)}<div>📚 直接掉落技能书 ×1 · 总掉率 ${BOOK_RATE[tier]*100}%</div>${pool.map(k=>`<div>${bookBadge(k)} ${k} · 每场约 ${(BOOK_RATE[tier]*bookWeight(k)/weight*100).toFixed(2)}%</div>`).join('')}<div>战斗中的高级书仅Boss掉落，同一书池里比单本低级书更稀有。本表是额外随机掉落，关卡固定奖励会另外结算。</div></details>`;
 }
 function lootHistory(){
   return`<div class="card"><h3>🎁 最近掉落</h3><div class="sub">保留最近6次有掉落的战斗，自动挂机的收获也会记录。</div>${S.lootLog.length?S.lootLog.map(entry=>`<div class="sub" style="margin-top:10px;line-height:1.7"><b>${entry.where}${entry.boss?' · Boss':''}</b> · ${new Date(entry.time).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})}<br>${entry.items.map(lootItemText).join('、')}${entry.crafted?'<br>碎片合成进化石 ×'+entry.crafted:''}</div>`).join(''):'<div class="sub" style="margin-top:8px">还没有掉落记录，赢得战斗后有机会获得道具。</div>'}</div>`;
@@ -316,6 +316,7 @@ function load(){try{const r=localStorage.getItem('petsaga2');if(r)S=Object.assig
 const normalizePotionThreshold=v=>v==null||!Number.isFinite(Number(v))?20:Math.min(95,Math.max(0,Math.round(Number(v)/5)*5));
 function initBag(){
   S.battleSpeed=[1,2,4].includes(S.battleSpeed)?S.battleSpeed:1;
+  if(S.off)delete S.off.adH;
   const expiry=Number(S.expBoostUntil);S.expBoostUntil=Number.isFinite(expiry)?Math.max(0,expiry):0;
   const valid=S.bag&&typeof S.bag=='object'&&!Array.isArray(S.bag);
   if(!valid)S.bag={red:S.pot===undefined?3:S.pot,blue:3,exp:0};
@@ -361,7 +362,7 @@ function bookUseView(p,expanded=false){
   }).join('');
 }
 function bookSourceView(){
-  return`<details class="sub battle-help"><summary>去哪刷技能书？</summary><div>普通战斗2%、Boss 12%概率掉一本。高级书仅Boss掉落，比同一书池中的单本低级书更稀有。</div>${REG.map((r,i)=>`<div><b>${r.n}（${i*5+1}–${i*5+5}关）</b>：${REGION_BOOKS[i].map(bookLabel).join('、')}</div>`).join('')}<div>无尽塔普通层掉低级书，塔主可掉两级书；悬赏按本场敌人五行决定书种。Boss另有2%概率掉技能书小礼包，打开随机获得1本低级书。战斗页显示各项掉率。</div></details>`;
+  return`<details class="sub battle-help"><summary>去哪刷技能书？</summary><div>普通战斗2%、Boss 12%概率掉一本。战斗中的高级书仅Boss掉落，比同一书池中的单本低级书更稀有；离线累计满12小时领取时也会送1本随机高级书。</div>${REG.map((r,i)=>`<div><b>${r.n}（${i*5+1}–${i*5+5}关）</b>：${REGION_BOOKS[i].map(bookLabel).join('、')}</div>`).join('')}<div>无尽塔普通层掉低级书，塔主可掉两级书；悬赏按本场敌人五行决定书种。Boss另有2%概率掉技能书小礼包，打开随机获得1本低级书。战斗页显示各项掉率。</div></details>`;
 }
 function cultivateView(){
   const p=get(S.sel),locked=B.run?'disabled':'',free=p?Math.max(0,slots(p)-p.sk.length):0;
@@ -882,25 +883,31 @@ function jobRow(p){
   return`<div class="at"><span>${emo(p)} ${p.n} Lv${p.lv} <span class="sub">${rate(p)}🪙/时</span></span><span>${r}</span></div>`;
 }
 function idleView(){
-  const o=S.off,naturalHours=o?Math.max(0,o.h-(o.adH||0)):0;
-  return`<div class="card"><h3>离线收益</h3>${o?`<div>自然离线 ${naturalHours.toFixed(1)} / ${capH()} 小时${o.adH?'<br>🎬 广告加速 +'+o.adH.toFixed(1)+' 小时':''}</div><div class="sub" style="line-height:1.7;margin-top:4px">🪙 ${o.c} · 全队经验 +${o.exp}<br>红药 ${Math.floor(o.h*1.5)} · 蓝药 ${Math.floor(o.h)} · 进化石碎片 ${Math.floor(o.h/2)}（5片合成1个进化石）· 💎 ${Math.floor(o.h/4)}<br>队伍休整：忠诚度 +${Math.min(20,Math.round(o.h*2.5))}${o.h>=4?'<br>✨ 累计收益满4小时，可能触发奇遇（野生宠物或宝箱）':''}</div><div class="row" style="margin-top:8px"><button class="b" data-a="oc" ${B.run?'disabled':''}>${B.run?'战斗结束后领取':'领取'}</button></div>`:`<div class="sub" style="line-height:1.7">暂无。离开游戏后自动结算：金币、全队经验、红药、蓝药、进化石碎片、钻石，还会恢复队伍忠诚度，满4小时有机会触发奇遇。<br>离线上限 ${capH()} 小时（每枚徽章+1小时，每个周目+2小时）。</div>`}<div class="row" style="margin-top:10px"><button class="b alt" data-a="offad" ${OFF_AD?'disabled':''}>${OFF_AD?'🎬 模拟广告播放中…':'🎬 看广告 · 加速2小时（模拟）'}</button></div><div class="sub" style="margin-top:6px;line-height:1.6">看完后，按当前进度增加2小时挂机收益，加入待领取奖励。广告加速不占自然离线上限。</div>${S.rep?`<div class="sub" style="margin-top:8px">上次领取：${S.rep}</div>`:''}</div>
+  const o=S.off,h=o?.h||0,full=h>=capH(),bookReady=h>=12,shown=(Math.floor(h*10)/10).toFixed(1);
+  return`<div class="card"><h3>离线收益</h3><div><b>已累计 ${shown} / ${capH()} 小时${full?' · 已满':''}</b></div><div class="sub" style="margin-top:4px">自然离线与广告加速统一累计，共用上限。基础12小时，每枚徽章+1小时，每个周目+2小时。</div>
+  <div class="battle-focus ${bookReady?'special':''}"><strong>📚 ${bookReady?'高级技能书已达成':'累计满12小时，额外送高级技能书'}</strong><div class="sub">${bookReady?'领取本次收益时，随机获得1本高级技能书。':'当前 '+shown+' / 12 小时；再累计 '+(Math.ceil((12-h)*10)/10).toFixed(1)+' 小时达成。'}<br>奖励池：${BOSS_BOOKS.join('、')}（等概率）。每次领取最多1本，领取后重新累计；提前领取会清空本次进度。</div></div>
+  ${o?`<div class="sub" style="line-height:1.7;margin-top:4px">🪙 ${o.c} · 全队经验 +${o.exp}<br>红药 ${Math.floor(h*1.5)} · 蓝药 ${Math.floor(h)} · 进化石碎片 ${Math.floor(h/2)}（5片合成1个进化石）· 💎 ${Math.floor(h/4)}<br>队伍休整：忠诚度 +${Math.min(20,Math.round(h*2.5))}${h>=4?'<br>✨ 累计收益满4小时，可能触发奇遇（野生宠物或宝箱）':''}</div><div class="row" style="margin-top:8px"><button class="b" data-a="oc" ${B.run||OFF_AD?'disabled':''}>${B.run?'战斗结束后领取':OFF_AD?'加速中，请稍候':bookReady?'领取收益＋高级技能书':'领取收益'}</button></div>`:'<div class="sub" style="margin-top:8px">暂无待领取收益。离线或使用广告加速后，奖励会累计在这里。</div>'}
+  <div class="row" style="margin-top:10px"><button class="b alt" data-a="offad" ${OFF_AD||full?'disabled':''}>${OFF_AD?'🎬 模拟广告播放中…':full?'离线收益已满':'🎬 看广告 · 加速最多2小时（模拟）'}</button></div><div class="sub" style="margin-top:6px;line-height:1.6">广告加速计入上面的累计时长和12小时技能书进度；剩余容量不足2小时时，只补满剩余时间。</div>${S.rep?`<div class="sub" style="margin-top:8px">上次领取：${S.rep}</div>`:''}</div>
   ${expView()}<div class="card"><h3>宠物派遣</h3><div class="sub" style="margin-bottom:8px">未参战的宠物外出打工，按时间产出金币、红药和蓝药（最多 8 小时），宠物越强收益越高。</div>${S.pets.map(jobRow).join('')}</div>`;
 }
-function addOfflineHours(h,ad=false){
-  const o=S.off||{c:0,exp:0,h:0,adH:0},lv=2+Math.max(1,S.maxStage-1)*3;
-  S.off={...o,c:o.c+Math.round(h*12*lv*3),exp:o.exp+Math.round(h*12*lv*5),h:o.h+h,adH:(o.adH||0)+(ad?h:0)};
+function addOfflineHours(h){
+  const o=S.off||{c:0,exp:0,h:0},lv=2+Math.max(1,S.maxStage-1)*3,added=Math.max(0,Math.min(h,capH()-o.h));
+  if(!added)return 0;
+  S.off={c:o.c+Math.round(added*12*lv*3),exp:o.exp+Math.round(added*12*lv*5),h:Math.min(capH(),o.h+added)};
+  return added;
 }
 function watchOfflineAd(){
-  if(OFF_AD)return;OFF_AD=true;render();toast('模拟广告播放中…');
-  setTimeout(()=>{if(!OFF_AD)return;OFF_AD=false;addOfflineHours(2,true);save();render();toast('已增加2小时挂机收益，请到挂机页领取')},1500);
+  if(OFF_AD)return;if((S.off?.h||0)>=capH())return toast('离线收益已满，请先领取');
+  OFF_AD=true;render();toast('模拟广告播放中…');
+  setTimeout(()=>{if(!OFF_AD)return;OFF_AD=false;const added=addOfflineHours(2);save();render();toast(added?'已计入 '+(Math.round(added*60))+' 分钟离线收益，累计 '+(Math.floor(S.off.h*10)/10).toFixed(1)+' 小时':'离线收益已满，请先领取')},1500);
 }
 function checkOff(){
-  const n=Date.now(),o=S.off||{c:0,exp:0,h:0},naturalHours=Math.max(0,o.h-(o.adH||0)),el=Math.max(0,Math.min(n-(S.last||n),(capH()-naturalHours)*36e5));
-  if(el>6e4){addOfflineHours(el/36e5);toast('离线收益可领取（挂机页）')}
+  const n=Date.now(),elapsed=Math.max(0,n-(S.last||n));
+  if(elapsed>6e4&&addOfflineHours(elapsed/36e5)>0)toast('离线收益可领取（挂机页）');
   S.last=n;save();
 }
 function claim(){
-  const o=S.off;if(!o)return;
+  const o=S.off;if(!o||B.run)return;if(OFF_AD)return toast('请等广告加速完成后一起领取');
   const h=o.h,pot=Math.floor(h*1.5),blue=Math.floor(h),sh=Math.floor(h/2),gm=Math.floor(h/4),ly=Math.min(20,Math.round(h*2.5));
   let up=0,st=0,ev='';
   S.coins+=o.c;addItem('red',pot);addItem('blue',blue);S.shard+=sh;S.gems+=gm;
@@ -913,8 +920,10 @@ function claim(){
       else{const np=mk(pick(z.sp),RI(z.lo,Math.round((z.lo+z.hi)/2)),Math.random()<z.baby*2?1:0,z);addPet(np);ev='；奇遇：一只野生'+np.n+'(Lv'+np.lv+')跟你回家了!'}
     }else{S.gems+=6;addItem('red',3);addItem('blue',2);ev='；奇遇：发现宝箱，💎6、红药x3、蓝药x2'}
   }
-  S.rep='🪙'+o.c+' · 经验+'+o.exp+(up?'(升级'+up+'次)':'')+' · 红药'+pot+' · 蓝药'+blue+' · 碎片'+sh+(st?'(进化石+'+st+')':'')+' · 💎'+gm+' · 忠诚+'+ly+ev;
-  S.off=null;toast('离线收益已领取');
+  let rewardBook=null;
+  if(h>=12){rewardBook=pick(BOSS_BOOKS);S.bag.books[rewardBook]=bookCount(rewardBook)+1}
+  S.rep='🪙'+o.c+' · 经验+'+o.exp+(up?'(升级'+up+'次)':'')+' · 红药'+pot+' · 蓝药'+blue+' · 碎片'+sh+(st?'(进化石+'+st+')':'')+' · 💎'+gm+' · 忠诚+'+ly+ev+(rewardBook?'；12小时奖励：'+bookLabel(rewardBook)+'技能书 ×1':'');
+  S.off=null;S.last=Date.now();save();toast('离线收益已领取'+(rewardBook?'，获得'+bookLabel(rewardBook)+'技能书 ×1':''));
 }
 function act(a,v){
   if(B.run&&!['tab','battlespeed','cmd','auto','farm','tgt','ally','dq','ac','autopot','bagmed','aptinfo','offad','potrule','bagselect','bagfilter','packresultclose','shopcurrency','fuseresultopen','fuseresultclose'].includes(a))return;
