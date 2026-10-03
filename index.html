@@ -36,6 +36,7 @@ button.b:disabled{opacity:.5}
 .apt-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 12px;margin:10px 0}.apt-row{display:flex;flex-wrap:wrap;align-items:center;gap:4px;font-size:12px}.apt-info{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:50%;width:24px;height:24px;padding:0;background:var(--line);color:var(--sub);font-size:16px;cursor:pointer}.apt-info[aria-expanded="true"]{background:var(--acc);color:#fff}.apt-info:focus-visible{outline:2px solid var(--acc);outline-offset:2px}.apt-full{display:inline-block;padding:1px 4px;border-radius:5px;background:var(--gold);color:#3a2b00;font-size:10px;font-weight:700}.apt-help{padding:10px;border-radius:10px;background:var(--bg);line-height:1.7;margin-bottom:10px}
 .potion-settings{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px;margin-top:10px}.potion-setting{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px}.potion-setting .b{padding:6px 10px;font-size:12px}
 .bag-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.bag-item{background:var(--bg);border-radius:12px;padding:10px}.bag-item h3{display:flex;justify-content:space-between;gap:4px}.bag-item .sub{line-height:1.6;min-height:58px}.bag-item .row{margin-top:8px}.bag-item button.b{font-size:12px;padding:8px}.bag-picker{margin-top:8px}
+.inventory-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-top:12px}.inventory-slot{position:relative;aspect-ratio:1;min-width:0;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);padding:8px 3px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font:inherit;cursor:pointer}.inventory-slot .item-icon{font-size:27px;line-height:1}.inventory-slot .item-name{font-size:11px;line-height:1.3;overflow-wrap:anywhere}.inventory-slot .item-count{position:absolute;right:4px;top:3px;font-size:10px;font-weight:700}.inventory-slot.high{border-color:var(--gold)}.inventory-slot .item-tier{position:absolute;left:4px;top:3px;font-size:9px;color:var(--sub)}.inventory-slot.selected{outline:2px solid var(--acc);outline-offset:1px}.inventory-slot.empty{opacity:.45;cursor:default}.inventory-slot:focus-visible{outline:2px solid var(--acc)}.shop-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}.shop-tabs .b{padding:12px 6px}.shop-product{display:flex;flex-direction:column;gap:8px}.shop-product .sub{flex:1;min-height:0}.shop-product button{width:100%}
 .tag{display:inline-block;background:var(--line);border-radius:8px;padding:2px 7px;margin:2px;font-size:12px}
 .tag.g{background:var(--gold);color:#3a2b00}
 .tag.bad{background:#a34242;color:#fff}
@@ -95,6 +96,7 @@ const pointDraft=p=>POINT_DRAFT.get(p.id)||[0,0,0,0,0];
 const APT_BANDS=[[.82,.95],[.96,1.06],[1.16,1.28]],EV_AP=[1.12,1.1];
 let APT_INFO=null;
 let OFF_AD=false;
+let BAG_ITEM=null,SHOP_CURRENCY='coins';
 function mk(sp,lv,q,z){
   const [lo,hi]=APT_BANDS[q],[gl,gh]=[[.85,1],[1,1.15],[1.25,1.4]][q];
   const sk=[],n=q==0?RI(0,1):q==1?2:3;
@@ -302,10 +304,6 @@ function bookUseView(p,expanded=false){
 function bookSourceView(){
   return`<details class="sub battle-help"><summary>去哪刷技能书？</summary><div>普通战斗2%、Boss 12%概率掉一本。高级书仅Boss掉落，比同一书池中的单本低级书更稀有。</div>${REG.map((r,i)=>`<div><b>${r.n}（${i*5+1}–${i*5+5}关）</b>：${REGION_BOOKS[i].map(bookLabel).join('、')}</div>`).join('')}<div>无尽塔普通层掉低级书，塔主可掉两级书；悬赏按本场敌人五行决定书种。战斗页显示本场各书的实际掉率。</div></details>`;
 }
-function bookBagView(){
-  const owned=SKN.filter(k=>bookCount(k)>0);
-  return`<div class="card"><h3>📚 技能书 · ${owned.reduce((n,k)=>n+bookCount(k),0)} 本</h3><div class="sub">在顶部“宠物培养”中打书、查看获取途径。</div><div class="row" style="margin-top:8px">${owned.map(k=>`<span class="tag" title="${SK[k]}">${bookBadge(k)} ${k} ×${bookCount(k)}</span>`).join('')||'<span class="sub">暂无技能书</span>'}</div></div>`;
-}
 function cultivateView(){
   const p=get(S.sel),locked=B.run?'disabled':'',free=p?Math.max(0,slots(p)-p.sk.length):0;
   return`<div class="card"><h3>📚 宠物培养</h3><div class="sub">选择宠物，再使用技能书学习技能。${B.run?'战斗中暂停切换培养对象和打书；连续自动战斗可在战斗页停止。':''}</div><div class="row bag-picker">${S.pets.map(q=>`<button class="pc ${q.q==2?'gold':''} ${q.id===S.sel?'sel':''}" data-a="sel" data-v="${q.id}" aria-pressed="${q.id===S.sel}" ${locked}><b>${emo(q)}</b>${q.n}<br>Lv${q.lv} · ${QN[q.q]}</button>`).join('')}</div></div>
@@ -330,13 +328,25 @@ const medicineNeeded=(c,t)=>!!t&&t.hp>0&&(c=='h'?t.hp<t.mx:t.mp<t.mm);
 function potionSettings(){
   return`<div class="potion-settings"><div class="row" style="justify-content:space-between"><b>自动用药设置</b><button class="b ${S.autoPotion?'':'alt'}" data-a="autopot">${S.autoPotion?'已开启':'已关闭'}</button></div>${['red','blue'].map(id=>{const pct=S.potionRules[id],label=id=='red'?'气血':'魔法';return`<div class="potion-setting"><span>${ITEMS[id].e} ${ITEMS[id].n}：<b>${pct?label+' ≤ '+pct+'%':'停用'}</b></span><div class="row"><button class="b alt" data-a="potrule" data-v="${id},-5" aria-label="降低${ITEMS[id].n}阈值5%" ${pct>0?'':'disabled'}>−5%</button><button class="b alt" data-a="potrule" data-v="${id},5" aria-label="提高${ITEMS[id].n}阈值5%" ${pct<95?'':'disabled'}>+5%</button></div></div>`}).join('')}<div class="sub" style="margin-top:8px;line-height:1.6">${S.autoPotion?'红药优先救急；有主动法术的宠物按魔法百分比用蓝药，遇到Boss蓄力时优先应对。':'当前自动用药关闭，开启后按以上百分比判断。'}<br>范围0–95%，0%停用该药。设置自动保存，下次自动行动生效。喂药占用本回合，不能同时攻击或施法；禁药周不可用药。</div></div>`;
 }
+function inventoryEntries(){
+  return[
+    ...Object.entries(ITEMS).map(([id,it])=>({id,...it,qty:itemCount(id),kind:['red','blue'].includes(id)?'medicine':'growth'})),
+    {id:'stone',n:'进化石',e:'🪨',qty:S.stone,kind:'material',desc:'用于宠物进化，达到条件后在首页使用。'},
+    {id:'shard',n:'进化石碎片',e:'🧩',qty:S.shard,kind:'material',desc:'每集齐5片自动合成1颗进化石。'},
+    ...SKN.map(k=>({id:'book:'+k,n:k,e:'📚',qty:bookCount(k),kind:'book',grade:bookGrade(k),desc:SK[k]}))
+  ].filter(it=>it.qty>0);
+}
 function bagView(){
-  const pet=get(S.sel),locked=B.run?'disabled':'';
-  return `<div class="card"><h3>🎒 背包</h3><div class="sub">道具自动叠加保存，可从战斗中获取或在商店补充。</div><details id="bag-rules" class="battle-help"><summary>自动用药设置 · ${S.autoPotion?'已开启':'已关闭'}</summary>${potionSettings()}</details></div>
-  <div class="card"><h3>战斗补给</h3><div class="bag-grid">${['red','blue'].map(id=>{const it=ITEMS[id],c=id=='red'?'h':'u';return`<div class="bag-item"><h3>${it.e} ${it.n}<span>×${itemCount(id)}</span></h3><div class="sub">${it.desc}</div><div class="row"><button class="b" data-a="bagmed" data-v="${c}" ${!B.run||B.auto||!medicineLeft(c)||B.tw&&wrule()==1?'disabled':''}>${B.run?'选择用药目标':'战斗中使用'}</button></div></div>`}).join('')}</div></div>
-  <div class="card"><h3>宠物养成道具</h3><div class="sub">使用对象：${pet?pet.n+' · Lv'+pet.lv:'请选择宠物'}${B.run?'（战斗中暂停使用养成道具）':''}</div><div class="row bag-picker">${S.pets.map(p=>`<button class="pc ${p.id===S.sel?'sel':''}" data-a="sel" data-v="${p.id}" ${locked}>${emo(p)} ${p.n}<br>Lv${p.lv}</button>`).join('')}</div><div class="bag-grid" style="margin-top:10px">${['exp','life'].map(id=>{const it=ITEMS[id];return`<div class="bag-item"><h3>${it.e} ${it.n}<span>×${itemCount(id)}</span></h3><div class="sub">${it.desc}</div><div class="row"><button class="b" data-a="useitem" data-v="${id}" ${B.run||!pet||!itemCount(id)||id=='exp'&&pet.lv>=60?'disabled':''}>使用1颗</button></div></div>`}).join('')}</div></div>
-  ${bookBagView()}
-  <div class="card"><h3>材料</h3><div class="at"><span>🪨 进化石</span><b>×${S.stone}</b></div><div class="sub">用于宠物进化，达到条件后在宠物页使用。</div><div class="at"><span>🧩 进化石碎片</span><b>×${S.shard}</b></div><div class="sub">每集齐5片自动合成1颗进化石。</div></div>${lootHistory()}`;
+  const entries=inventoryEntries(),it=entries.find(x=>x.id===BAG_ITEM),pet=get(S.sel),capacity=Math.max(16,Math.ceil(entries.length/4)*4);
+  return`<div class="card"><h3>🎒 背包 <span class="sub">${entries.length} 种物品</span></h3><div class="sub">点击格子查看物品。同类道具自动叠加，格子随物品种类增加。</div><div class="inventory-grid">${entries.map(x=>`<button class="inventory-slot ${x.grade||''} ${it?.id===x.id?'selected':''}" data-a="bagselect" data-v="${x.id}" aria-label="${x.grade?BOOK_GRADES[x.grade].name:''}${x.n}，数量${x.qty}" aria-pressed="${it?.id===x.id}">${x.grade?`<span class="item-tier">${BOOK_GRADES[x.grade].name}</span>`:''}<span class="item-count">×${x.qty}</span><span class="item-icon" aria-hidden="true">${x.e}</span><span class="item-name">${x.n}</span></button>`).join('')}${Array.from({length:capacity-entries.length},()=>'<div class="inventory-slot empty" aria-hidden="true"></div>').join('')}</div></div>
+  ${it?`<div class="card"><h3>${it.e} ${it.n} ×${it.qty} ${it.grade?bookBadge(it.n):''}</h3><div class="sub battle-help">${it.desc}</div>${it.kind=='growth'?`<div class="sub" style="margin-top:10px">使用对象：${pet?pet.n+' · Lv'+pet.lv:'请选择宠物'}${B.run?' · 战斗中暂不可使用':''}</div><div class="row bag-picker">${S.pets.map(p=>`<button class="pc ${p.id===S.sel?'sel':''}" data-a="sel" data-v="${p.id}" ${B.run?'disabled':''}>${emo(p)} ${p.n}<br>Lv${p.lv}</button>`).join('')}</div><button class="b" style="margin-top:10px" data-a="useitem" data-v="${it.id}" ${B.run||!pet||it.id=='exp'&&pet.lv>=60?'disabled':''}>${it.id=='exp'&&pet?.lv>=60?'宠物已满级':'使用1颗'}</button>`:it.kind=='medicine'?'<div class="sub battle-help">在战斗页使用和调整自动用药，战斗补给在金币商店购买。</div>':it.kind=='book'?'<div class="sub battle-help">在宠物培养页打书。</div>':''}</div>`:'<div class="card sub">'+(entries.length?'选择上方物品查看详情。':'背包空空的，战斗掉落的道具会放在这里。')+'</div>'}${lootHistory()}`;
+}
+function shopView(){
+  const coins=SHOP_CURRENCY=='coins',currency=coins?'coins':'gems',symbol=coins?'🪙':'💎',pet=get(S.sel);
+  const goods=Object.entries(ITEMS).filter(([,it])=>it.currency===currency).map(([id,it])=>{const qty=['red','blue'].includes(id)?3:1;return{n:it.n,e:it.e,desc:it.desc,price:it.price*qty,qty,action:'buyitem',value:id+','+qty,stock:itemCount(id)}});
+  if(coins)goods.push({n:'进化石',e:'🪨',desc:'用于宠物进化，购买后放入背包。',price:600,qty:1,action:'stone',stock:S.stone},{n:'性格药',e:'🧪',desc:'购买后立即重随 '+(pet?pet.n:'选中宠物')+' 的性格。',price:200,qty:1,action:'nat',needsPet:true});
+  else goods.push({n:'特性胶囊',e:'💊',desc:'购买后立即重随 '+(pet?pet.n:'选中宠物')+' 的特性。',price:8,qty:1,action:'ab',needsPet:true});
+  return`<div class="card"><div class="shop-tabs">${[['coins','🪙 金币商店'],['gems','💎 钻石商店']].map(([id,n])=>`<button class="b ${SHOP_CURRENCY===id?'':'alt'}" data-a="shopcurrency" data-v="${id}" aria-pressed="${SHOP_CURRENCY===id}">${n}</button>`).join('')}</div><div class="sub">余额 ${symbol}${S[currency]}${B.run?' · 战斗中暂停购买':''}</div></div><div class="card"><div class="bag-grid">${goods.map(g=>`<div class="bag-item shop-product"><h3>${g.e} ${g.n}</h3><div class="sub">${g.desc}${g.stock!==undefined?'<br>持有 '+g.stock:''}</div><button class="b" data-a="${g.action}" ${g.value?`data-v="${g.value}"`:''} ${B.run||S[currency]<g.price||g.needsPet&&!pet?'disabled':''}>${g.needsPet?'购买并使用':'购买 ×'+g.qty} · ${g.price}${symbol}</button></div>`).join('')}</div></div><div class="card"><h3>${coins?'金币补充':'钻石补充'}</h3><div class="row">${coins?'<button class="b alt" data-a="ad" '+(B.run?'disabled':'')+'>看广告 +100🪙（模拟）</button>':'<button class="b alt" data-a="daily" '+(B.run?'disabled':'')+'>每日领取 +10💎</button><button class="b alt" data-a="iap" '+(B.run?'disabled':'')+'>60💎 · $0.99（演示，不扣费）</button>'}</div></div><details class="card"><summary>存档管理</summary><button class="b alt" style="margin-top:10px" data-a="reset" ${B.run?'disabled':''}>重置存档</button></details>`;
 }
 function card(p,extra){return`<button class="pc ${p.q==2?'gold':''} ${S.sel===p.id?'sel':''}" data-a="${extra||'sel'}" data-v="${p.id}"><b>${emo(p)}</b>${p.n}<br>Lv${p.lv}${p.ev?' ★'+p.ev:''}${S.team.includes(p.id)?' ⭐':''}${p.job?' ⏳':''}${p.q?' <span class="tag">'+QN[p.q]+'</span>':''}${isGatherer(p)?' ⛏':''}</button>`}
 function aptitudeRange(p,i){
@@ -377,7 +387,7 @@ function battleCommands(cur){
   <button class="b" data-a="cmd" data-v="a" ${locked}>⚔️ 普攻 · 回蓝4</button>
   ${skills.map(([c,s])=>`<button class="b" data-a="cmd" data-v="${c}" title="${SK[s.skill]}" ${B.auto||cur.mp<s.cost?'disabled':''}>${s.skill} · ${s.cost}蓝${cur.mp<s.cost?'（不足）':''}</button>`).join('')}
   <button class="b alt" data-a="cmd" data-v="d" ${locked}>🛡 防御 · 回蓝8</button>${Object.entries(MEDICINE).map(([c,id])=>`<button class="b alt" data-a="cmd" data-v="${c}" ${B.auto||!medicineLeft(c)||B.tw&&wrule()==1?'disabled':''}>${ITEMS[id].e} ${ITEMS[id].n}×${medicineLeft(c)}</button>`).join('')}
-  ${B.pend?'<button class="b alt" data-a="cmd" data-v="x">取消选目标</button>':''}<button class="b alt" data-a="auto">${B.auto?'停止自动':'自动'}</button></div>${potionSettings()}`;
+  ${B.pend?'<button class="b alt" data-a="cmd" data-v="x">取消选目标</button>':''}<button class="b alt" data-a="auto">${B.auto?'停止自动':'自动'}</button></div>`;
 }
 function battleArena(F,T,cur){
   const enemyTarget=!B.auto&&targetSide(B.pend)=='enemy',allyTarget=!B.auto&&targetSide(B.pend)=='ally',pct=x=>Math.max(0,x.hp)/x.mx*100;
@@ -401,7 +411,7 @@ function view(){
     return`${modeBar()}${tw?towerCard():hunt?huntCard():`<div class="card"><h3>世界地图 🏅${S.badges.length}/6${S.ng?' · 第'+(S.ng+1)+'周目':''}</h3><div class="row">${REG.map((r,i)=>`<button class="b ${e.ri===i?'':'alt'}" data-a="reg" data-v="${i}">${S.badges.includes(i)?'🏅':''}${r.n}${S.maxStage<i*5+1?' 🔒':''}</button>`).join('')}</div><div class="sub" style="margin-top:6px">${e.map}：${ELC[e.el]}${ELS[e.el]}系 · 馆主 ${REG[e.ri].e}${REG[e.ri].g}（第${e.ri*5+5}关）· 推荐带 ${ELC[BEAT.indexOf(e.el)]}${ELS[BEAT.indexOf(e.el)]}系宠物克制。首次击败馆主获得徽章：全队属性+2%、💎15。</div>${S.badges.length>=6?`<div class="row" style="margin-top:8px"><button class="b" data-a="ng">开启第${S.ng+2}周目：敌人更强、技能更多、奖励+50%</button></div>`:''}</div>
     <div class="card"><div class="row" style="justify-content:space-between"><button class="b alt" data-a="st" data-v="-1">◀</button><b>第 ${S.stage} 关 · ${e.map}</b><button class="b alt" data-a="st" data-v="1">▶</button></div><div class="sub" style="text-align:center;margin-top:4px">已解锁至第 ${S.maxStage} 关${e.b?' · BOSS关':''} · 奖励 ${Math.round(e.lv*12*(e.b?3:1)*(1+.5*S.ng))}🪙 · 在宠物页上阵最多3只</div></div>
     `}${!tw&&!hunt?`<div class="card"><button class="b ${S.farmOn?'':'alt'}" data-a="farm">${S.farmOn?'停止连续自动':'开启连续自动'}</button><div class="sub" style="margin-top:6px">${S.farmOn?(S.farmHold?'固定刷第 '+S.stage+' 关':'自动挑战新关；失败后退回上一关持续刷'):'连续自动只在页面打开时运行；退到后台按离线收益结算。'}</div></div>`:''}${!hunt||S.hunt.clears<3?`<div class="card sub">本场总经验 <b>${totalExp}</b> · ${T.length?'按 '+T.length+' 只参战平分，每只 '+Math.floor(totalExp/T.length)+(totalExp%T.length?'～'+Math.ceil(totalExp/T.length):'')+' 点':'请先上阵可参战宠物'}<br>胜利后结算，倒下的参战宠物也能获得经验。</div>`:''}${battleArena(F,T,cur)}
-    ${B.run?battleCommands(cur):hunt&&S.hunt.clears>=3?'<div class="sub">今日悬赏已完成，明天刷新。</div>':'<button class="b" style="width:100%;padding:12px" data-a="bstart">开始战斗</button>'}`;
+    ${B.run?battleCommands(cur):hunt&&S.hunt.clears>=3?'<div class="sub">今日悬赏已完成，明天刷新。</div>':'<button class="b" style="width:100%;padding:12px" data-a="bstart">开始战斗</button>'}<div class="card" style="margin-top:10px"><div class="sub">战斗补给：🔴 红药 ×${itemCount('red')} · 🔵 蓝药 ×${itemCount('blue')} · 在金币商店补充</div>${potionSettings()}</div>`;
   }
   if(t=='catch'){
     const z=ZONES[S.zone],ok=S.ng||S.maxStage>=z.need;
@@ -411,14 +421,12 @@ function view(){
   ${LAST?`<div class="card"><h3>捕获成功!</h3><div class="row">${card(LAST,'sel')}</div><div class="sub" style="margin-top:6px">五行 ${ELC[LAST.el]}${ELS[LAST.el]} · 性格${NAT[LAST.nat][0]} · 特性${AB[LAST.ab][0]} · 成长率 ${LAST.g}<br>技能 ${LAST.sk.join('、')||'无'}</div>${aptitudeView(LAST)}</div>`:''}`;
   }
   if(t=='fuse')return`<div class="card"><h3>炼化 (100🪙)</h3><div class="sub" style="margin-bottom:8px">选择两只宠物，消耗它们炼出一只新宠物：资质取平均并有机会提升，最低为宝宝品质，从 Lv1 开始。父母独有技能各有50%概率继承，共有技能为80%；另有30%概率触发技能共鸣，额外继承最多2个未继承的技能。最终数量受新宠技能格限制；元素敏感宠物只能继承符合自身五行的弱点。</div><div class="row">${S.pets.map(q=>`<button class="pc ${S.mg.includes(q.id)?'sel':''}" data-a="mg" data-v="${q.id}"><b>${emo(q)}</b>${q.n}<br>Lv${q.lv} · 技能${q.sk.length}</button>`).join('')}</div><button class="b" style="margin-top:10px" data-a="fuse">炼化</button></div>`;
-  return`<div class="card"><h3>商店</h3><div class="row" style="flex-direction:column;align-items:stretch;gap:8px"><button class="b" data-a="ad">看广告 +100🪙 (模拟)</button><button class="b" data-a="daily">每日领取 +10💎</button><button class="b alt" data-a="nat">性格药 200🪙：重随选中宠物性格</button><button class="b alt" data-a="ab">特性胶囊 8💎：重随选中宠物特性</button><button class="b alt" data-a="stone">购买进化石 600🪙（持有 ${S.stone}）</button><button class="b alt" data-a="buyitem" data-v="red,3">红药 x3 · 30🪙（恢复40%气血）</button><button class="b alt" data-a="buyitem" data-v="blue,3">蓝药 x3 · 45🪙（恢复40%魔法）</button><button class="b alt" data-a="buyitem" data-v="exp,1">经验丹 x1 · 100🪙（购买后放入背包）</button><button class="b alt" data-a="buyitem" data-v="life,1">长寿丹 x1 · 20💎（购买后放入背包）</button><button class="b alt" data-a="iap">购买 60💎 $0.99 (演示，不扣费)</button><button class="b alt" data-a="reset">重置存档</button></div></div>`;
+  return shopView();
 }
 function render(){
-  const bagRulesOpen=$('bag-rules')?.open;
   $('coins').textContent='🪙 '+S.coins;$('gems').textContent='💎 '+S.gems;
   $('tabs').innerHTML=TABS.map(t=>{const main=t[0]=='pets'||t[0]=='bag',home=t[0]=='pets';return`<button class="${main?'nav-main ':''}${S.tab===t[0]?'on':''}" data-a="tab" data-v="${t[0]}" ${S.tab===t[0]?'aria-current="page"':''}>${main?`<span class="nav-icon" aria-hidden="true">${home?'🏠':'🎒'}</span><span><strong>${home?'首页':'背包'}</strong><small>${home?'宠物与队伍':'道具与技能书'}</small></span>`:t[1]}${(t[0]=='idle'&&S.off)||(t[0]=='quest'&&claimable())?'🔴':''}</button>`}).join('');
   $('main').innerHTML=view();
-  if(bagRulesOpen&&$('bag-rules'))$('bag-rules').open=true;
 }
 function addPet(p){if(S.pets.length>=PET_CAP){toast('宠物栏已满，请先放生');return false}S.pets.push(p);dx(p);return true}
 const alive=a=>a.filter(x=>x.hp>0),nxt=i=>{for(;i<B.T.length;i++)if(B.T[i].hp>0)return i;return -1};
@@ -663,9 +671,11 @@ function claim(){
   S.off=null;toast('离线收益已领取');
 }
 function act(a,v){
-  if(B.run&&!['tab','cmd','auto','farm','tgt','ally','dq','ac','autopot','bagmed','aptinfo','offad','potrule'].includes(a))return;
+  if(B.run&&!['tab','cmd','auto','farm','tgt','ally','dq','ac','autopot','bagmed','aptinfo','offad','potrule','bagselect','shopcurrency'].includes(a))return;
   const p=get(S.sel);
   if(a=='tab'){S.tab=v;REL=0}
+  else if(a=='bagselect'){if(!inventoryEntries().some(it=>it.id===v))return;BAG_ITEM=v;render();return}
+  else if(a=='shopcurrency'){if(!['coins','gems'].includes(v))return;SHOP_CURRENCY=v;render();return}
   else if(a=='sel'){S.sel=+v;REL=0}
   else if(a=='aptinfo'){const [id,index]=String(v).split(',').map(Number),pet=get(id)||(LAST?.id===id?LAST:null);if(!pet||!Number.isInteger(index)||index<0||index>=pet.ap.length)return;APT_INFO=APT_INFO?.id===id&&APT_INFO.index===index?null:{id,index};render();return}
   else if(a=='autopot'){S.autoPotion=!S.autoPotion;toast('自动用药已'+(S.autoPotion?'开启，会消耗背包红蓝药':'关闭'))}
