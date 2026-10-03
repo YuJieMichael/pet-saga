@@ -25,6 +25,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,"P
 .pc{border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:6px 8px;text-align:center;min-width:64px;cursor:pointer;color:var(--ink);font-size:12px}
 .pc b{display:block;font-size:26px}
 .pc.sel{border-color:var(--acc)}.pc.gold{background:#f6e3a1;color:#3a2b00}
+.encounters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}.encounter{min-width:0;width:100%;min-height:145px;padding:10px 4px;border:2px solid var(--line);border-radius:14px;background:var(--bg);color:var(--ink);cursor:pointer;font:inherit;text-align:center}.encounter b{display:block;font-size:38px;margin:8px 0}.encounter strong{display:block;font-size:13px;overflow-wrap:anywhere}.encounter small{display:block;margin-top:5px;font-size:11px}.encounter.mutant{background:linear-gradient(145deg,#eee4ff,#fff1c6);border-color:#b78adc;color:#3e275b}.encounter.mutant b{filter:hue-rotate(110deg);text-shadow:0 0 14px #bd73ff}.encounter.baby{border-color:#73b78a}.encounter.rare{box-shadow:inset 0 0 0 2px var(--gold)}.encounter.selected{outline:3px solid var(--acc);outline-offset:2px}.encounter:focus-visible{outline:3px solid var(--acc)}.encounter.caught{opacity:.45;cursor:default}.encounter-banner{padding:12px;background:var(--bg);border-left:4px solid var(--gold);border-radius:10px;line-height:1.6;margin:10px 0}.catch-options{display:flex;gap:12px;flex-wrap:wrap;margin:10px 0}.catch-options label{display:flex;align-items:center;gap:5px;font-size:12px}.catch-options input{width:18px;height:18px;accent-color:var(--acc)}.capture-result{border:2px solid var(--gold)}
 button.b{border:0;border-radius:10px;padding:8px 12px;background:var(--acc);color:#fff;font-weight:700;cursor:pointer;font-size:13px}
 button.b.alt{background:var(--line);color:var(--ink)}
 button.b:disabled{opacity:.5}
@@ -103,6 +104,7 @@ const TABS=[['pets','🏠 首页'],['bag','🎒 背包'],['cultivate','📚 宠�
 const R=(a,b)=>a+Math.random()*(b-a),RI=(a,b)=>Math.floor(R(a,b+1)),pick=a=>a[RI(0,a.length-1)],$=id=>document.getElementById(id);
 let S={coins:500,gems:30,last:0,off:null,team:[],dex:{},xps:[null,null,null],xsel:{car:0,z:0,d:0,ids:[]},xlogs:[[],[],[]],stone:0,shard:0,rep:'',dxc:[],badges:[],ng:0,floor:1,tower:0,hunt:{d:'',clears:0},farmOn:false,farmHold:false,mode:'main',dq:null,ac:[],cnt:{win:0,fuse:0,cap:0},bag:null,autoPotion:false,pets:[],active:0,nid:1,stage:1,maxStage:1,tab:'pets',sel:0,zone:0,mg:[],day:''};
 let B={run:0},LOGL=[],LAST=null,REL=0,AUTO_TIMER=null,FARM_TIMER=null,BATTLE_TIMER=null;
+let CAPTURE_AUTO=false,CAPTURE_TIMER=null,CAPTURE_PENDING=null;
 const POINT_DRAFT=new Map();
 const pointDraft=p=>POINT_DRAFT.get(p.id)||[0,0,0,0,0];
 const APT_BANDS=[[.82,.95],[.96,1.06],[1.16,1.28]],EV_AP=[1.12,1.1];
@@ -472,6 +474,124 @@ function shopView(){
   else goods.push({n:'特性胶囊',e:'💊',desc:'购买后立即重随 '+(pet?pet.n:'选中宠物')+' 的特性。',price:8,qty:1,action:'ab',needsPet:true});
   return`<div class="card"><div class="shop-tabs">${[['coins','🪙 金币商店'],['gems','💎 钻石商店']].map(([id,n])=>`<button class="b ${SHOP_CURRENCY===id?'':'alt'}" data-a="shopcurrency" data-v="${id}" aria-pressed="${SHOP_CURRENCY===id}">${n}</button>`).join('')}</div><div class="sub">余额 ${symbol}${S[currency]}</div></div>${coins?'':skinShopView()}<div class="card"><div class="bag-grid">${goods.map(g=>`<div class="bag-item shop-product"><h3>${g.e} ${g.n}</h3><div class="sub">${g.desc}${g.stock!==undefined?'<br>持有 '+g.stock:''}</div>${g.needsPet?shopPetPicker(g.action):''}<button class="b" data-a="${g.action}" ${g.value?`data-v="${g.value}"`:''} ${S[currency]<g.price||g.needsPet&&(!pet||isBattlePet(pet))?'disabled':''}>${g.needsPet?'购买并使用':'购买 ×'+g.qty} · ${g.price}${symbol}</button></div>`).join('')}</div></div><div class="card"><h3>${coins?'金币补充':'钻石补充'}</h3><div class="row">${coins?'<button class="b alt" data-a="ad" >看广告 +100🪙（模拟）</button>':'<button class="b alt" data-a="daily" >每日领取 +10💎</button><button class="b alt" data-a="iap" >60💎 · $0.99（演示，不扣费）</button>'}</div></div><details class="card"><summary>存档管理</summary><button class="b alt" style="margin-top:10px" data-a="reset" ${B.run?'disabled':''}>重置存档</button></details>`;
 }
+const captureCost=z=>Math.max(5,Math.round(z.cost/4));
+const captureSpecial=e=>!e.caught&&(e.pet.q>0||e.rare);
+function initCapture(){
+  if(!Number.isInteger(S.zone)||!ZONES[S.zone])S.zone=0;
+  const c=S.capture&&typeof S.capture==='object'?S.capture:{};
+  const options=c.options||{};
+  S.capture={zone:S.zone,batch:[],selected:0,round:0,nextAt:0,tryAt:0,notice:'选择栖息地，探索寻找想要的伙伴。',last:null,...c,options:{baby:options.baby!==false,mutant:options.mutant!==false,rare:options.rare!==false}};
+  const state=S.capture;
+  if(state.zone!==S.zone||!Array.isArray(state.batch))state.batch=[];
+  state.batch=state.batch.filter(e=>e&&e.pet&&SP[e.pet.sp]&&[0,1,2].includes(e.pet.q)&&Number.isInteger(e.pet.id)).slice(0,3);
+  state.zone=S.zone;
+  state.round=Number.isFinite(state.round)?Math.max(0,Math.floor(state.round)):0;
+  state.nextAt=Number.isFinite(state.nextAt)?Math.min(state.nextAt,Date.now()+5000):0;
+  state.tryAt=0;
+  for(const e of state.batch){S.nid=Math.max(S.nid,e.pet.id+1);if(get(e.pet.id))e.caught=true}
+  if(!state.batch.some(e=>e.pet.id===state.selected&&!e.caught))state.selected=0;
+  if(!state.last||!SP[state.last.sp]||!Array.isArray(state.last.ap))state.last=null;
+  LAST=state.last;
+}
+function stopCaptureAuto(message){
+  if(!message&&CAPTURE_AUTO)message='已停止自动探索，当前遭遇已保留。';
+  CAPTURE_AUTO=false;if(CAPTURE_TIMER)clearTimeout(CAPTURE_TIMER);CAPTURE_TIMER=null;
+  if(message)S.capture.notice=message;
+}
+function captureMatch(e){const o=S.capture.options;return !e.caught&&(o.baby&&e.pet.q===1||o.mutant&&e.pet.q===2||o.rare&&e.rare)}
+function captureRate(e,superior){return Math.min(.98,[.85,.65,.4][e.pet.q]-(e.rare?.1:0)+(superior?.35:0))}
+function exploreCapture(){
+  const c=S.capture,z=ZONES[S.zone];
+  if(document.hidden||S.tab!=='catch')return false;
+  if(!S.ng&&S.maxStage<z.need){stopCaptureAuto('这片区域尚未解锁。');return false}
+  if(S.pets.length>=PET_CAP){stopCaptureAuto('宠物栏已满，请先腾出位置再探索。');return false}
+  if(S.coins<captureCost(z)){stopCaptureAuto('金币不足，探索已停止。当前遭遇仍然保留。');return false}
+  if(Date.now()<c.nextAt)return false;
+  S.coins-=captureCost(z);c.zone=S.zone;c.round++;c.selected=0;c.nextAt=Date.now()+5000;CAPTURE_PENDING=null;
+  // Roll the whole encounter once. Selecting a target, changing charms or reloading never rerolls it.
+  c.batch=Array.from({length:3},()=>{
+    const r=Math.random(),q=r<z.mut?2:r<z.mut+z.baby?1:0,rare=Math.random()<z.rare;
+    return{pet:mk(rare?z.rs:pick(z.sp),q?1:RI(z.lo,z.hi),q,z),rare,caught:false};
+  });
+  const special=c.batch.filter(captureSpecial),match=c.batch.find(captureMatch);
+  c.notice=special.length?'✨ 发现 '+special.map(e=>(e.rare?'稀有·':'')+(e.pet.q===1?'宝宝·':'')+e.pet.n).join('、')+'！选择目标查看捕捉机会。':'草丛里出现了 3 只宠物，选择想要的伙伴。';
+  if(CAPTURE_AUTO&&match){stopCaptureAuto('✨ 遇到目标，自动探索已停止！这一批会为你保留。');c.selected=match.pet.id;toast('发现目标！自动探索已停止')}
+  save();return true;
+}
+function queueCaptureExplore(){
+  if(CAPTURE_TIMER)clearTimeout(CAPTURE_TIMER);
+  if(!CAPTURE_AUTO)return;
+  CAPTURE_TIMER=setTimeout(()=>{
+    CAPTURE_TIMER=null;
+    if(!CAPTURE_AUTO)return;
+    if(document.hidden||S.tab!=='catch'){stopCaptureAuto('已暂停探索，当前遭遇已保留。');save();return}
+    const match=S.capture.batch.find(captureMatch);
+    if(match){stopCaptureAuto('✨ 当前已有目标，请先选择捕捉或继续探索。');S.capture.selected=match.pet.id}
+    else exploreCapture();
+    save();render();if(CAPTURE_AUTO)queueCaptureExplore();
+  },Math.max(100,S.capture.nextAt-Date.now()));
+}
+function startCaptureAuto(){
+  if(!Object.values(S.capture.options).some(Boolean))return toast('请至少选择一种自动停止条件');
+  const match=S.capture.batch.find(captureMatch);
+  if(match){S.capture.selected=match.pet.id;S.capture.notice='✨ 当前已有符合条件的目标。先捕捉，或点“继续探索”放弃这一批。';return}
+  CAPTURE_AUTO=true;S.capture.notice='自动探索中：每 5 秒探索一批，遇到所选目标立即停止。';
+  if(Date.now()>=S.capture.nextAt)exploreCapture();
+  queueCaptureExplore();
+}
+function requestCaptureChange(type,zone){
+  stopCaptureAuto();
+  if(type==='zone'&&(!Number.isInteger(zone)||!ZONES[zone]||zone===S.zone))return;
+  if(type==='zone'&&!S.ng&&S.maxStage<ZONES[zone].need)return toast('区域未解锁');
+  if(S.capture.batch.some(captureSpecial)){CAPTURE_PENDING={type,zone};return}
+  applyCaptureChange(type,zone);
+}
+function applyCaptureChange(type,zone){
+  CAPTURE_PENDING=null;
+  if(type==='zone'){
+    S.zone=zone;S.capture.zone=zone;S.capture.batch=[];S.capture.selected=0;S.capture.notice='已到达'+ZONES[zone].n+'，开始探索寻找伙伴。';
+  }else if(!exploreCapture()&&Date.now()<S.capture.nextAt)toast('稍等片刻，正在寻找下一批踪迹');
+}
+function catchEncounter(value){
+  const [id,kind]=String(value).split(',');
+  if(!['0','1'].includes(kind))return;
+  const c=S.capture,e=c.batch.find(e=>e.pet.id===Number(id)&&!e.caught),z=ZONES[S.zone],superior=kind==='1';
+  if(!e||c.zone!==S.zone||S.tab!=='catch')return;
+  stopCaptureAuto();CAPTURE_PENDING=null;
+  if(!S.ng&&S.maxStage<z.need)return toast('区域未解锁');
+  if(S.pets.length>=PET_CAP)return toast('宠物栏已满，请先放生');
+  if(Date.now()<c.tryAt)return;
+  const currency=superior?'gems':'coins',price=superior?z.gem:z.cost;
+  if(S[currency]<price)return toast(superior?'钻石不足':'金币不足');
+  S[currency]-=price;c.tryAt=Date.now()+800;
+  if(Math.random()<captureRate(e,superior)){
+    e.caught=true;addPet(e.pet);LAST=JSON.parse(JSON.stringify(e.pet));c.last=LAST;S.sel=e.pet.id;c.selected=0;qp('cap');
+    c.notice='🎉 捕获成功！'+e.pet.n+' 已加入宠物栏，下方揭晓资质与技能。';toast('捕获成功：'+e.pet.n);
+  }else{c.notice='捕捉符被挣脱了！'+e.pet.n+' 还在原地，可以重试或换高级符。本次捕捉符已消耗。';toast('捕捉失败，目标仍然保留')}
+}
+function captureView(){
+  const c=S.capture,z=ZONES[S.zone],ok=!!S.ng||S.maxStage>=z.need,e=c.batch.find(e=>e.pet.id===c.selected&&!e.caught),last=c.last;
+  return`<div class="card"><h3>🌿 寻找伙伴</h3><div class="sub">探索栖息地 → 选择目标 → 捕获后揭晓资质与技能</div><div class="row" style="margin-top:10px">${ZONES.map((q,i)=>`<button class="b ${S.zone===i?'':'alt'}" data-a="zone" data-v="${i}">${q.n}${!S.ng&&S.maxStage<q.need?' 🔒':''}</button>`).join('')}</div></div>
+  <div class="card"><h3>${z.n} · 野生 Lv${z.lo}–${z.hi}</h3><div class="sub battle-help">${z.tag}<br>常见：${z.sp.map(i=>SP[i].e+SP[i].n).join('、')}<br>稀有目标：${SP[z.rs].e} ${SP[z.rs].n} · ${S.dex[z.rs]?'已发现':'尚未收集'}<br>宝宝与变异从 Lv1 培养。</div><details class="sub battle-help"><summary>遭遇概率与区域特点</summary>每只独立出现：宝宝 ${+(z.baby*100).toFixed(2)}% · 变异 ${+(z.mut*100).toFixed(2)}%。<br>种类独立判定：稀有种 ${+(z.rare*100).toFixed(2)}%，也可能同时是宝宝或变异。<br>五行：${[...new Set(z.el)].map(i=>ELC[i]+ELS[i]).join(' ')} · 技能倾向：${z.sk.join('、')}。<br>变异资质、成长更高，多 1 个基础技能格。完整属性在捕获后揭晓。捕捉符只影响成功率，不改变目标品质。</details>
+  ${!ok?`<div class="intent">🔒 通关第 ${z.need-1} 关后解锁。</div>`:''}<div class="encounter-banner" role="status" aria-live="polite">${c.notice}</div>
+  ${c.batch.length?`<div class="sub">第 ${c.round} 次探索 · 本批已捕获 ${c.batch.filter(e=>e.caught).length}/3</div><div class="encounters">${c.batch.map(e=>`<button class="encounter ${e.pet.q===2?'mutant':e.pet.q===1?'baby':''} ${e.rare?'rare':''} ${e.caught?'caught':''} ${c.selected===e.pet.id?'selected':''}" data-a="capselection" data-v="${e.pet.id}" aria-pressed="${c.selected===e.pet.id}" ${e.caught?'disabled':''}><small>${e.rare?'🌟 稀有种':'普通种'}</small><b>${SP[e.pet.sp].e}</b><strong>${e.pet.n}</strong><small>${e.caught?'✓ 已捕获':e.pet.q===2?'✨ 变异':e.pet.q===1?'🌱 宝宝':'野生'} · Lv${e.pet.lv}</small></button>`).join('')}</div>`:'<div class="sub" style="padding:18px 0;text-align:center">🍃 林间传来窸窣声，下一位伙伴正在等你发现。</div>'}
+  ${e?`<div class="potion-settings"><h3>捕捉 ${e.pet.n}${e.rare?' · 稀有种':''}</h3><div class="sub battle-help">资质、成长与技能：捕获后揭晓。<br>失败会消耗捕捉符，目标保留，可再次尝试。</div><div class="row" style="margin-top:10px"><button class="b" data-a="cap" data-v="${e.pet.id},0" ${S.coins<z.cost||S.pets.length>=PET_CAP?'disabled':''}>普通符 · ${z.cost}🪙<br>成功率 ${Math.round(captureRate(e,false)*100)}%</button><button class="b" data-a="cap" data-v="${e.pet.id},1" ${S.gems<z.gem||S.pets.length>=PET_CAP?'disabled':''}>高级符 · ${z.gem}💎<br>成功率 ${Math.round(captureRate(e,true)*100)}%</button></div></div>`:''}
+  ${CAPTURE_PENDING?`<div class="potion-settings"><strong>这一批还有宝宝、变异或稀有宠物。</strong><div class="sub battle-help">${CAPTURE_PENDING.type==='zone'?'切换区域':'继续探索'}会放弃当前整批未捕获目标，无法找回。</div><div class="row" style="margin-top:8px"><button class="b" data-a="capconfirm">确认放弃${CAPTURE_PENDING.type==='zone'?'并切换':'并探索'}</button><button class="b alt" data-a="capcancel">留下来捕捉</button></div></div>`:''}
+  <div class="row" style="margin-top:14px"><button class="b" data-a="explore" ${!ok||S.coins<captureCost(z)||S.pets.length>=PET_CAP||Date.now()<c.nextAt?'disabled':''}>${c.batch.length?'继续探索':'探索踪迹'} · ${captureCost(z)}🪙</button><button class="b alt" data-a="capauto" ${!CAPTURE_AUTO&&(!ok||S.coins<captureCost(z)||S.pets.length>=PET_CAP)?'disabled':''}>${CAPTURE_AUTO?'停止自动探索':'自动探索'}</button></div><div id="capture-timing" class="sub battle-help"></div>
+  <div class="sub battle-help">每次探索出现 3 只；继续探索会替换当前整批。捕捉符在使用时单独付费。</div></div>
+  <div class="card"><h3>自动探索 · 遇到即停</h3><div class="catch-options">${[['baby','🌱 宝宝'],['mutant','✨ 变异'],['rare','🌟 稀有种']].map(([key,name])=>`<label><input type="checkbox" data-a="capoption" data-v="${key}" ${c.options[key]?'checked':''}>${name}</label>`).join('')}</div><div class="sub battle-help">每 5 秒花费 ${captureCost(z)} 金币寻找下一批，仅探索，不自动使用捕捉符。勾选任一目标出现时停止。离开捕捉页、切到后台或金币不足时停止，当前遭遇会保存。</div></div>
+  ${last?`<div class="card capture-result"><h3>🎉 最近捕获 · ${last.n}</h3><div class="row">${get(last.id)?card(get(last.id),'sel'):`<span class="tag">${SP[last.sp].e} ${last.n} · 捕获记录</span>`}</div><div class="sub battle-help">${QN[last.q]} · 五行 ${ELC[last.el]}${ELS[last.el]} · 性格 ${NAT[last.nat][0]} · 特性 ${AB[last.ab][0]}<br>成长率 ${last.g} · 技能 ${last.sk.join('、')||'无'}</div>${aptitudeView(last)}</div>`:''}`;
+}
+function updateCaptureTiming(){
+  if(S.tab!=='catch')return;
+  const el=$('capture-timing'),c=S.capture,z=ZONES[S.zone],seconds=Math.max(0,Math.ceil((c.nextAt-Date.now())/1000));
+  if(el)el.textContent=CAPTURE_AUTO?'🌿 自动探索中 · '+seconds+' 秒后寻找下一批':seconds?'寻找下一批踪迹中 · '+seconds+' 秒后可继续':'可以继续探索；当前遭遇会一直保留到你离开这批。';
+  const button=$('main').querySelector('[data-a="explore"]');
+  if(button)button.disabled=(!S.ng&&S.maxStage<z.need)||S.coins<captureCost(z)||S.pets.length>=PET_CAP||seconds>0;
+  const auto=$('main').querySelector('[data-a="capauto"]');
+  if(auto)auto.disabled=!CAPTURE_AUTO&&((!S.ng&&S.maxStage<z.need)||S.coins<captureCost(z)||S.pets.length>=PET_CAP);
+  $('main').querySelectorAll('[data-a="cap"]').forEach(button=>{const superior=button.dataset.v.endsWith(',1');button.disabled=S.pets.length>=PET_CAP||S[superior?'gems':'coins']<(superior?z.gem:z.cost)||Date.now()<c.tryAt});
+}
 function card(p,extra){return`<button class="pc ${p.q==2?'gold':''} ${S.sel===p.id?'sel':''}" data-a="${extra||'sel'}" data-v="${p.id}"><b>${emo(p)}</b>${p.n}<br>Lv${p.lv}${p.ev?' ★'+p.ev:''}${S.team.includes(p.id)?' ⭐':''}${p.job?' ⏳':''}${p.q?' <span class="tag">'+QN[p.q]+'</span>':''}${isGatherer(p)?' ⛏':''}</button>`}
 function fusionQuickOption(){return`<label class="fusion-option"><input type="checkbox" data-setting="fuseQuick" ${S.fuseQuick===true?'checked':''} >跳过结果展示，快速炼化</label><div class="sub" style="margin-top:4px">仅跳过结果展示；每次仍需选择两只宠物并点击炼化。</div>`}
 function fusionResultView(r){
@@ -620,13 +740,7 @@ function view(){
     `}${!tw&&!hunt?`<div class="card"><button class="b ${S.farmOn?'':'alt'}" data-a="farm">${S.farmOn?'停止连续自动':'开启连续自动'}</button><div class="sub" style="margin-top:6px">${S.farmOn?(S.farmHold?'固定刷第 '+S.stage+' 关':'自动挑战新关；失败后退回上一关持续刷'):'连续自动只在页面打开时运行；退到后台按离线收益结算。'}</div></div>`:''}${!hunt||S.hunt.clears<3?`<div class="card sub">本场总经验 <b>${totalExp}</b>${expBoostMultiplier()==2?'（含经验丹+100%）':' '} · ${T.length?'按 '+T.length+' 只参战平分，每只 '+Math.floor(totalExp/T.length)+(totalExp%T.length?'～'+Math.ceil(totalExp/T.length):'')+' 点':'请先上阵可参战宠物'}<br>胜利后结算，倒下的参战宠物也能获得经验。</div>`:''}${battleArena(F,T,cur)}
     ${B.run?battleCommands(cur):hunt&&S.hunt.clears>=3?'<div class="sub">今日悬赏已完成，明天刷新。</div>':'<button class="b" style="width:100%;padding:12px" data-a="bstart">开始战斗</button>'}<div class="card" style="margin-top:10px"><div class="sub">战斗补给：🔴 红药 ×${itemCount('red')} · 🔵 蓝药 ×${itemCount('blue')} · 在金币商店补充</div>${potionSettings()}</div>`;
   }
-  if(t=='catch'){
-    const z=ZONES[S.zone],ok=S.ng||S.maxStage>=z.need;
-    return`<div class="card"><h3>选择区域</h3><div class="row">${ZONES.map((q,i)=>`<button class="b ${S.zone===i?'':'alt'}" data-a="zone" data-v="${i}">${q.n}${!S.ng&&S.maxStage<q.need?' 🔒':''}</button>`).join('')}</div></div>
-  <div class="card"><h3>${z.n} · Lv${z.lo}-${z.hi}</h3><div class="sub" style="line-height:1.7">${z.tag}<br>常见宠物：${z.sp.map(i=>SP[i].e+SP[i].n).join(' ')}<br>五行：${[...new Set(z.el)].map(i=>ELC[i]+ELS[i]).join(' ')}<br>技能倾向：${z.sk.join('、')}<br>稀有：${SP[z.rs].e}${SP[z.rs].n}（${S.dex[z.rs]?'已发现':'未发现'}）普通符 ${(z.rare*100).toFixed(1)}% · 超级符 ${(Math.min(.15,z.rare*4)*100).toFixed(1)}%<br>变异宠物资质更高、成长更快，并多1个技能栏（最多5个）<br>普通符：宝宝 ${Math.round(z.baby*100)}% · 变异 ${(z.mut*100).toFixed(1)}%<br>超级符：宝宝 ${Math.round(Math.min(.6,z.baby*3.5)*100)}% · 变异 ${(z.mut*600).toFixed(1)}%${ok?'':'<br>🔒 需通关战斗第 '+(z.need-1)+' 关解锁'}</div></div>
-  <div class="card"><h3>捕捉</h3><div class="row"><button class="b" data-a="cap" data-v="0">普通符 ${z.cost}🪙</button><button class="b" data-a="cap" data-v="1">超级符 ${z.gem}💎</button></div><div class="sub" style="margin-top:6px">高等级区域的宠物等级更高，但宝宝和变异更稀有；低等级区域更容易出高资质的宝宝，但要从头养。部分元素敏感宠物（蛟龙、大海龟、巨蛙、烈焰龙）可能带有五行弱点，弱点属性一定克制宠物自身五行。它们出现弱点的概率：野生40%、宝宝20%、变异5%。</div></div>
-  ${LAST?`<div class="card"><h3>捕获成功!</h3><div class="row">${card(LAST,'sel')}</div><div class="sub" style="margin-top:6px">五行 ${ELC[LAST.el]}${ELS[LAST.el]} · 性格${NAT[LAST.nat][0]} · 特性${AB[LAST.ab][0]} · 成长率 ${LAST.g}<br>技能 ${LAST.sk.join('、')||'无'}</div>${aptitudeView(LAST)}</div>`:''}`;
-  }
+  if(t=='catch')return captureView();
   if(t=='fuse')return fusionView();
   return shopView();
 }
@@ -636,7 +750,7 @@ function render(){
   $('coins').textContent='🪙 '+S.coins;$('gems').textContent='💎 '+S.gems;
   $('tabs').innerHTML=TABS.map(t=>{const main=t[0]=='pets'||t[0]=='bag',home=t[0]=='pets';return`<button class="${main?'nav-main ':''}${S.tab===t[0]?'on':''}" data-a="tab" data-v="${t[0]}" ${S.tab===t[0]?'aria-current="page"':''}>${main?`<span class="nav-icon" aria-hidden="true">${home?'🏠':'🎒'}</span><span><strong>${home?'首页':'背包'}</strong><small>${home?'宠物与队伍':'道具与技能书'}</small></span>`:t[1]}${(t[0]=='idle'&&S.off)||(t[0]=='quest'&&claimable())?'🔴':''}</button>`}).join('');
   $('main').innerHTML=view();
-  updateBattleStatus();
+  updateCaptureTiming();updateBattleStatus();
   const lockedPet=isBattlePet(get(S.sel));
   $('main').querySelectorAll('button[data-a]').forEach(button=>{if(lockedPet&&PET_BATTLE_LOCKS.includes(button.dataset.a)||B.run&&SCENE_BATTLE_LOCKS.includes(button.dataset.a))button.disabled=true});
 }
@@ -971,7 +1085,7 @@ function act(a,v){
   if(B.run&&SCENE_BATTLE_LOCKS.includes(a))return toast('本场战斗结束后可调整阵容或切换关卡');
   if(isBattlePet(p)&&PET_BATTLE_LOCKS.includes(a))return toast('这只宠物正在参战，请选择未参战宠物，或停止自动并等本场结束');
   if(a!=='washapply')WASH_CONFIRM=null;
-  if(a=='tab'){S.tab=v;REL=0}
+  if(a=='tab'){if(v!=='catch'&&CAPTURE_AUTO)stopCaptureAuto('已离开捕捉页，自动探索停止；当前遭遇已保留。');CAPTURE_PENDING=null;S.tab=v;REL=0}
   else if(a=='stopbackground'){S.farmOn=false;S.farmHold=false;if(FARM_TIMER)clearTimeout(FARM_TIMER);B.stopAfterBattle=!!B.run;toast(B.run?'本场战斗结束后停止自动，可继续操作其他页面':'已停止连续自动')}
   else if(a=='battlespeed'){const speed=Number(v);if(![1,2,4].includes(speed))return;S.battleSpeed=speed}
   else if(a=='rename'&&p){
@@ -1082,16 +1196,22 @@ function act(a,v){
   else if(a=='ac'){const i=+v,x=ACH[i];if(!x[2]()||S.ac.includes(i))return toast('尚未达成');S.ac.push(i);S.gems+=x[3];toast('成就达成 💎+'+x[3])}
   else if(a=='stone'){if(S.coins<COIN_SHOP_COST.stone)return toast('金币不足');S.coins-=COIN_SHOP_COST.stone;S.stone++}
   else if(a=='dxc'){const n=+v;if(dexScore()<n||S.dxc.includes(n))return;S.dxc.push(n);({10:()=>S.coins+=300,20:()=>S.gems+=10,30:()=>S.stone+=3,40:()=>S.gems+=30})[n]();toast('已领取图鉴奖励')}
-  else if(a=='zone')S.zone=+v;
-  else if(a=='cap'){
-    const z=ZONES[S.zone],sup=v=='1';
-    if(!S.ng&&S.maxStage<z.need)return toast('区域未解锁：需通关战斗第 '+(z.need-1)+' 关');
-    if(sup?S.gems<z.gem:S.coins<z.cost)return toast(sup?'钻石不足':'金币不足');
-    if(S.pets.length>=PET_CAP)return toast('宠物栏已满，请先放生');
-    sup?S.gems-=z.gem:S.coins-=z.cost;
-    const r=Math.random(),mu=z.mut*(sup?6:1),ba=Math.min(.6,z.baby*(sup?3.5:1)),q=r<mu?2:r<ba?1:0;
-    const rr=Math.random()<(sup?Math.min(.15,z.rare*4):z.rare),qq=rr?Math.max(q,1):q;LAST=mk(rr?z.rs:pick(z.sp),RI(z.lo,z.hi),qq,z);addPet(LAST);qp('cap');S.sel=LAST.id;toast('捕获 '+LAST.n+(rr?'！稀有宠物':qq?'！'+QN[qq]+'品质':''));
+  else if(a=='zone')requestCaptureChange('zone',Number(v));
+  else if(a=='explore')requestCaptureChange('explore');
+  else if(a=='capconfirm'){if(!CAPTURE_PENDING)return;const pending=CAPTURE_PENDING;applyCaptureChange(pending.type,pending.zone)}
+  else if(a=='capcancel')CAPTURE_PENDING=null;
+  else if(a=='capauto'){CAPTURE_PENDING=null;if(CAPTURE_AUTO)stopCaptureAuto('已停止自动探索，当前遭遇已保留。');else startCaptureAuto()}
+  else if(a=='capoption'){
+    if(!Object.hasOwn(S.capture.options,v))return;
+    S.capture.options[v]=!S.capture.options[v];
+    if(!Object.values(S.capture.options).some(Boolean))stopCaptureAuto('请至少勾选一种目标后再开启自动探索。');
+    if(CAPTURE_AUTO&&S.capture.batch.some(captureMatch))stopCaptureAuto('✨ 当前已有符合条件的目标，自动探索已停止。');
   }
+  else if(a=='capselection'){
+    const e=S.capture.batch.find(e=>e.pet.id===Number(v)&&!e.caught);if(!e)return;
+    stopCaptureAuto('已选中 '+e.pet.n+'，选择捕捉符尝试收服。');CAPTURE_PENDING=null;S.capture.selected=e.pet.id;
+  }
+  else if(a=='cap')catchEncounter(v);
   else if(a=='mg'){const i=S.mg.indexOf(+v);if(i>=0)S.mg.splice(i,1);else{if(isBattlePet(get(+v)))return toast('参战宠物暂不可炼化');S.mg.push(+v);if(S.mg.length>2)S.mg.shift()}}
   else if(a=='fuse'){
     if(S.mg.length<2)return toast('请选择两只宠物');
@@ -1123,10 +1243,11 @@ function act(a,v){
   }
   save();render();
   if(a=='fuse'&&FUSION_RESULT_OPEN)$('fusion-result')?.scrollIntoView({block:'start',behavior:'smooth'});
+  if(a=='cap'&&S.capture.last?.id===Number(String(v).split(',')[0]))$('main').querySelector('.capture-result')?.scrollIntoView({block:'start',behavior:'smooth'});
 }
 document.addEventListener('submit',e=>{if(e.target.id==='pet-rename-form'){e.preventDefault();act('rename')}});
 document.addEventListener('click',e=>{if(Date.now()<ROSTER_NO_CLICK_UNTIL){e.preventDefault();return}const b=e.target.closest('[data-a]');if(b)act(b.dataset.a,b.dataset.v)});
-load();initBag();initSkins();S.xps=Array.isArray(S.xps)?S.xps:[null,null,null];while(S.xps.length<3)S.xps.push(null);if(S.xp&&!S.xps.some(Boolean))S.xps[0]=S.xp;S.xlogs=Array.isArray(S.xlogs)?S.xlogs:[[],[],[]];while(S.xlogs.length<3)S.xlogs.push([]);if(S.xlog?.length&&!S.xlogs[0]?.length)S.xlogs[0]=S.xlog;S.xsel??={z:0,d:0,ids:[]};S.xsel.car??=0;delete S.xp;delete S.xlog;
+load();initBag();initSkins();initCapture();S.xps=Array.isArray(S.xps)?S.xps:[null,null,null];while(S.xps.length<3)S.xps.push(null);if(S.xp&&!S.xps.some(Boolean))S.xps[0]=S.xp;S.xlogs=Array.isArray(S.xlogs)?S.xlogs:[[],[],[]];while(S.xlogs.length<3)S.xlogs.push([]);if(S.xlog?.length&&!S.xlogs[0]?.length)S.xlogs[0]=S.xlog;S.xsel??={z:0,d:0,ids:[]};S.xsel.car??=0;delete S.xp;delete S.xlog;
 S.pets.forEach(p=>{
   p.el??=RI(0,4);p.xl??=[0,0,0];p.nd??=[];delete p.life;p.job??=0;p.ev??=0;p.nat??=RI(0,5);p.ab??=RI(0,5);p.sk??=[];
   if(!validPetName(p.nickname))delete p.nickname;refreshPetName(p);
@@ -1138,9 +1259,9 @@ if(!Array.isArray(S.team))S.team=get(S.active)?[S.active]:[];S.team=[...new Set(
 dqRoll();S.pets.forEach(dx);if(!get(S.sel))S.sel=S.pets[0].id;if(S.mode!='main')S.farmOn=false;
 render();if(S.farmOn)scheduleFarm();
 if(RETIRED_LIFE_REFUND){save();toast('寿命系统已移除，剩余长寿丹已退还 '+RETIRED_LIFE_REFUND+' 钻石');RETIRED_LIFE_REFUND=0}
-document.addEventListener('visibilitychange',()=>{if(document.hidden){if(BATTLE_TIMER)clearTimeout(BATTLE_TIMER);BATTLE_TIMER=null;if(FARM_TIMER)clearTimeout(FARM_TIMER);stopAutoRun();S.last=Date.now();save()}else{checkOff();if(B.run&&B.resolving)queueBattleStep(200);if(S.farmOn){if(B.run)autoRun();else scheduleFarm()}render()}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){if(CAPTURE_AUTO)stopCaptureAuto('已切到后台，自动探索停止；当前遭遇已保留。');if(BATTLE_TIMER)clearTimeout(BATTLE_TIMER);BATTLE_TIMER=null;if(FARM_TIMER)clearTimeout(FARM_TIMER);stopAutoRun();S.last=Date.now();save()}else{checkOff();if(B.run&&B.resolving)queueBattleStep(200);if(S.farmOn){if(B.run)autoRun();else scheduleFarm()}render()}});
 setInterval(()=>{if(!document.hidden&&!B.run){S.last=Date.now();save();if(S.tab=='idle')render()}},5000);
-setInterval(()=>{if(document.hidden)return;const was=EXP_BOOST_ACTIVE;updateExpBoostStatus();if(was!==EXP_BOOST_ACTIVE)render()},1000);
+setInterval(()=>{if(document.hidden)return;updateCaptureTiming();const was=EXP_BOOST_ACTIVE;updateExpBoostStatus();if(was!==EXP_BOOST_ACTIVE)render()},1000);
 </script>
 </body>
 </html>
