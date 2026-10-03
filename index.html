@@ -68,11 +68,11 @@ button.b:disabled{opacity:.5}
 const SP=[{e:'🐲',n:'蛟龙',b:[1500,1100,3800,1500,1200]},{e:'🐢',n:'大海龟',b:[1000,1600,4600,1100,900]},{e:'🦝',n:'狸',b:[1100,1000,3400,2000,1500]},{e:'🐯',n:'老虎',b:[1600,1200,4000,1000,1300]},{e:'🦅',n:'飞燕',b:[1300,900,3300,1300,1700]},{e:'🐸',n:'巨蛙',b:[1200,1400,4800,1200,1000]},{e:'🦌',n:'灵鹿',b:[1300,1400,4600,2200,1700]},{e:'🦁',n:'金狮',b:[1900,1500,4600,1200,1500]},{e:'🐉',n:'烈焰龙',b:[1800,1300,4200,2000,1600]}];
 const ELS=['金','木','水','火','土'],ELC=['🟡','🟢','🔵','🔴','🟤'],BEAT=[1,4,3,0,2],ELM=(x,y)=>BEAT[x]==y?1.3:BEAT[y]==x?.75:1;
 const MAPS=['大唐境外','东海湾','江南野外','女儿村','长寿郊外','花果山'],MON=[['👺','强盗'],['🐗','野猪'],['💀','骷髅怪'],['🦇','蝙蝠'],['🐍','毒蛇']],BOSS=['九头虫','牛魔王','白骨精'];
-const SK={连击:'普攻有40%概率追加一次60%伤害',必杀:'普攻有25%概率造成2倍伤害',吸血:'普通攻击实际伤害的30%回复气血',反震:'受到物理伤害时反弹25%实际伤害，反弹不会再次触发反震',神佑:'每场首次受到致命伤时有30%概率复活，恢复40%气血；不屈优先触发',再生:'每回合开始时恢复5%气血，倒下后不生效',烈火:'8魔法：火系单体法术，基础伤害为法攻×1.8，再计算防御与五行',地狱烈火:'12魔法：火系群体法术，每个敌人的基础伤害为法攻×0.85',治疗:'10魔法：恢复一名存活队友最大气血的30%，不超过气血上限',定身:'10魔法：普通敌人75%、Boss 45%概率失去下一次行动；可打断已蓄力的群攻。被控后短暂免控',护佑:'8魔法：全队本回合及下回合受到的伤害降低25%，重复施放只刷新持续时间',弱金:'受到金系攻击时额外承受20%伤害',弱木:'受到木系攻击时额外承受20%伤害',弱水:'受到水系攻击时额外承受20%伤害',弱火:'受到火系攻击时额外承受20%伤害',弱土:'受到土系攻击时额外承受20%伤害'};
-const CAST={m:{skill:'烈火',cost:8,target:'enemy'},g:{skill:'地狱烈火',cost:12,target:'all'},heal:{skill:'治疗',cost:10,target:'ally'},seal:{skill:'定身',cost:10,target:'enemy'},buff:{skill:'护佑',cost:8,target:'team'}};
-const SPEC_SK=[['烈火','地狱烈火'],['护佑','再生'],['定身','烈火'],['连击','必杀'],['定身','连击'],['再生','护佑'],['治疗','神佑'],['必杀','吸血'],['烈火','地狱烈火']];
+const SK={嘲讽:'8魔法：施放后至下回合结束，敌方单体攻击强制以自己为目标；不影响群攻、治疗或蓄力。后施放者接替，倒下时失效，可搭配反震。',连击:'普攻有40%概率追加一次60%伤害',必杀:'普攻有25%概率造成2倍伤害',吸血:'普通攻击实际伤害的30%回复气血',反震:'受到物理伤害时反弹25%实际伤害，反弹不会再次触发反震',神佑:'每场首次受到致命伤时有30%概率复活，恢复40%气血；不屈优先触发',再生:'每回合开始时恢复5%气血，倒下后不生效',烈火:'8魔法：火系单体法术，基础伤害为法攻×1.8，再计算防御与五行',地狱烈火:'12魔法：火系群体法术，每个敌人的基础伤害为法攻×0.85',治疗:'10魔法：恢复一名存活队友最大气血的30%，不超过气血上限',定身:'10魔法：普通敌人75%、Boss 45%概率失去下一次行动；可打断已蓄力的群攻。被控后短暂免控',护佑:'8魔法：全队本回合及下回合受到的伤害降低25%，重复施放只刷新持续时间',弱金:'受到金系攻击时额外承受20%伤害',弱木:'受到木系攻击时额外承受20%伤害',弱水:'受到水系攻击时额外承受20%伤害',弱火:'受到火系攻击时额外承受20%伤害',弱土:'受到土系攻击时额外承受20%伤害'};
+const CAST={taunt:{skill:'嘲讽',cost:8,target:'self'},m:{skill:'烈火',cost:8,target:'enemy'},g:{skill:'地狱烈火',cost:12,target:'all'},heal:{skill:'治疗',cost:10,target:'ally'},seal:{skill:'定身',cost:10,target:'enemy'},buff:{skill:'护佑',cost:8,target:'team'}};
+const SPEC_SK=[['烈火','地狱烈火'],['嘲讽','反震','护佑','再生'],['定身','烈火'],['连击','必杀'],['定身','连击'],['嘲讽','反震','再生','护佑'],['治疗','神佑'],['必杀','吸血'],['烈火','地狱烈火']];
 const maxMana=p=>Math.round(24+p.lv*.6+p.at[1]*1.5);
-const fighter=p=>{const a=stats(p),mm=maxMana(p);return{p,a,hp:a.hp,mx:a.hp,mp:mm,mm,cmd:null,tg:0,df:0,guardUntil:0}};
+const fighter=p=>{const a=stats(p),mm=maxMana(p);return{p,a,hp:a.hp,mx:a.hp,mp:mm,mm,cmd:null,tg:0,df:0,guardUntil:0,tauntUntil:0}};
 const intent=f=>!f.boss?'':f.stun?'被定身：下次行动跳过':f.phase=='burst'?'⚠️ 下回合：蓄力群攻':f.phase=='charge'?'下回合：蓄力（不攻击）':'下回合：'+((f.sk||[]).includes('治疗')&&f.hp<f.mx*.5?'自我治疗':'普通攻击');
 const MEDICINE={h:'red',u:'blue'},RECOVERY={red:100,blue:30,heal:.3};
 const targetSide=c=>c=='a'?'enemy':MEDICINE[c]?'ally':CAST[c]?.target;
@@ -87,11 +87,11 @@ const bookLabel=k=>'【'+BOOK_GRADES[bookGrade(k)].name+'】'+k;
 const bookBadge=k=>'<span class="book-grade '+bookGrade(k)+'">'+BOOK_GRADES[bookGrade(k)].name+'</span>';
 const bookWeight=k=>BOOK_GRADES[bookGrade(k)].weight;
 function rollBook(pool){if(!pool.length)return null;let roll=Math.random()*pool.reduce((sum,k)=>sum+bookWeight(k),0);for(const k of pool){roll-=bookWeight(k);if(roll<0)return k}return pool[pool.length-1]}
-const REGION_BOOKS=[['连击','必杀','反震'],['再生','治疗','护佑'],['烈火','吸血','再生'],['定身','治疗','护佑'],['必杀','反震','神佑'],['烈火','地狱烈火','神佑']];
-const ELEMENT_BOOKS=[['连击','必杀','反震'],['治疗','再生','定身'],['治疗','护佑','神佑'],['烈火','地狱烈火','吸血'],['反震','护佑','神佑']];
+const REGION_BOOKS=[['连击','必杀','反震'],['再生','治疗','护佑','嘲讽'],['烈火','吸血','再生'],['定身','治疗','护佑'],['必杀','反震','神佑'],['烈火','地狱烈火','神佑']];
+const ELEMENT_BOOKS=[['连击','必杀','反震'],['治疗','再生','定身'],['治疗','护佑','神佑','嘲讽'],['烈火','地狱烈火','吸血'],['反震','护佑','神佑','嘲讽']];
 const ZONES=[
  {n:'🌲 森林',lo:1,hi:15,sp:[2,4,5],el:[1,2],sk:['再生','治疗','定身','神佑'],baby:.12,mut:.02,cost:50,gem:10,need:1,rs:6,rare:.03,tag:'治疗与控制 · 灵鹿擅长治疗'},
- {n:'⛰️ 山地',lo:10,hi:30,sp:[3,1],el:[0,4],sk:['必杀','连击','反震','护佑'],baby:.08,mut:.012,cost:80,gem:12,need:4,rs:7,rare:.025,tag:'物理与防护 · 大海龟擅长护佑'},
+ {n:'⛰️ 山地',lo:10,hi:30,sp:[3,1],el:[0,4],sk:['必杀','连击','反震','护佑'],baby:.08,mut:.012,cost:80,gem:12,need:4,rs:7,rare:.025,tag:'物理与防护 · 大海龟擅长嘲讽与反震'},
  {n:'🌋 火山',lo:25,hi:50,sp:[0,3],el:[3,3,4],sk:['烈火','地狱烈火','必杀','连击'],baby:.05,mut:.008,cost:130,gem:15,need:8,rs:8,rare:.02,tag:'法术爆发 · 蛟龙与烈焰龙擅长火法'}];
 const TABS=[['pets','🏠 首页'],['bag','🎒 背包'],['cultivate','📚 宠物培养'],['fight','⚔️ 战斗'],['catch','🌿 捕捉'],['fuse','🔮 炼化'],['idle','⏳ 挂机'],['quest','📋 任务'],['dex','📖 图鉴'],['shop','🛒 商店']];
 const R=(a,b)=>a+Math.random()*(b-a),RI=(a,b)=>Math.floor(R(a,b+1)),pick=a=>a[RI(0,a.length-1)],$=id=>document.getElementById(id);
@@ -569,7 +569,7 @@ function battleCommands(cur){
 function battleArena(F,T,cur){
   const enemyTarget=!B.auto&&targetSide(B.pend)=='enemy',allyTarget=!B.auto&&targetSide(B.pend)=='ally',pct=x=>Math.max(0,x.hp)/x.mx*100;
   return `<div class="card"><div class="sub">敌方${enemyTarget?'（点击选择目标）':''}</div><div class="team">${F.map((f,i)=>`<div class="fc ${f.hp<=0?'dead':''} ${enemyTarget&&f.hp>0?'tgt':''}" ${enemyTarget&&f.hp>0?`data-a="tgt" data-v="${i}"`:''}><b>${f.e}</b>${f.n} Lv${f.lv}${ELC[f.el]}<br><span class="sub">${(f.sk||[]).join(' ')}</span>${f.boss&&f.hp>0?`<span class="intent">${intent(f)}</span>`:''}${f.stun&&!f.boss?'<span class="tag">定身</span>':''}<div class="hb"><div class="hf e" style="width:${pct(f)}%"></div></div><span class="sub">${Math.max(0,f.hp)}/${f.mx}</span></div>`).join('')}</div>
-  <div class="sub">我方${allyTarget?(MEDICINE[B.pend]?'（点击选择用药目标）':'（点击选择治疗目标）'):''}</div><div class="team">${T.map((x,i)=>`<div class="fc ${x.hp<=0?'dead':''} ${cur===x?'cur':''} ${allyTarget&&x.hp>0?'ally-target':''}" ${allyTarget&&x.hp>0?`data-a="ally" data-v="${i}"`:''}><b>${emo(x.p)}</b>${x.p.n} Lv${x.p.lv}${ELC[x.p.el]}<div class="hb"><div class="hf" style="width:${pct(x)}%"></div></div><span class="sub">${Math.max(0,x.hp)}/${x.mx}</span><div class="hb mp"><div class="hf m" style="width:${x.mp/x.mm*100}%"></div></div><span class="sub">魔法 ${x.mp}/${x.mm}</span>${x.guardUntil>B.r?'<br><span class="tag">护佑</span>':''}${x.stun?'<br><span class="tag">眩晕</span>':''}</div>`).join('')}</div>
+  <div class="sub">我方${allyTarget?(MEDICINE[B.pend]?'（点击选择用药目标）':'（点击选择治疗目标）'):''}</div><div class="team">${T.map((x,i)=>`<div class="fc ${x.hp<=0?'dead':''} ${cur===x?'cur':''} ${allyTarget&&x.hp>0?'ally-target':''}" ${allyTarget&&x.hp>0?`data-a="ally" data-v="${i}"`:''}><b>${emo(x.p)}</b>${x.p.n} Lv${x.p.lv}${ELC[x.p.el]}<div class="hb"><div class="hf" style="width:${pct(x)}%"></div></div><span class="sub">${Math.max(0,x.hp)}/${x.mx}</span><div class="hb mp"><div class="hf m" style="width:${x.mp/x.mm*100}%"></div></div><span class="sub">魔法 ${x.mp}/${x.mm}</span>${x.guardUntil>B.r?'<br><span class="tag">护佑</span>':''}${x.hp>0&&x.tauntUntil>B.r?'<br><span class="tag">嘲讽中 · 单体集火</span>':''}${x.stun?'<br><span class="tag">眩晕</span>':''}</div>`).join('')}</div>
   ${B.run&&F.some(f=>f.hp>0&&f.boss&&f.phase=='burst'&&!f.stun)?'<div class="intent">⚠️ Boss 已蓄力！本回合可防御减伤50%，或用定身打断、集火击倒。</div>':''}
   <div id="log">${LOGL.slice(-12).join('<br>')}</div>${lootOdds(F)}
   <details class="sub battle-help"><summary>战斗规则与技能</summary><div>每场开始气血与魔法补满。普攻不耗蓝并回复4魔法；防御减伤50%并回复8魔法。治疗与红蓝药只能选择存活队友。红药固定恢复${RECOVERY.red}点气血，蓝药固定恢复${RECOVERY.blue}点魔法，治疗技能恢复目标最大气血的30%（消耗10魔法），用药占用一次行动，目标已满时不消耗。禁药周两种药都不能使用。</div><div>战斗经验为固定总量，胜利后由本场实际参战宠物平分，倒下的宠物也有份。除不尽的余数按上阵顺序各补1点。</div><div>首领循环：普攻（部分首领低血时治疗）→ 蓄力 → 群攻。定身可打断已蓄力的群攻；速度快的控制宠更容易抢先出手。自动战斗会根据血量、魔法和首领行动选择技能。</div>${[...new Set(T.flatMap(x=>x.p.sk))].map(k=>`<div><b>${k}</b>：${SK[k]||''}</div>`).join('')}</details></div>`;
@@ -661,6 +661,9 @@ function autoPick(t){
   }
   const learned=Object.values(CAST).filter(s=>t.p.sk.includes(s.skill));
   if(useMeds&&S.potionRules.blue>0&&medicineLeft('u')>0&&learned.length&&t.mp*100<=t.mm*S.potionRules.blue){t.cmd='u';t.tg=B.T.indexOf(t);return}
+  const taunter=allies.find(x=>x.tauntUntil>=B.r+1||x.cmd=='taunt');
+  if(canCast(t,'taunt')&&allies.length>1&&t.hp>=t.mx*.5&&!taunter){t.cmd='taunt';return}
+  if(taunter===t&&t.hp<t.mx*.6){t.cmd='d';return}
   if(canCast(t,'buff')&&allies.length>1&&allies.some(x=>x.hp<x.mx*.8)&&allies.some(x=>!(x.guardUntil>=B.r+1))){t.cmd='buff';return}
   if(canCast(t,'seal')){const target=enemies.find(f=>!f.stun&&!(f.controlImmuneUntil>=B.r+1)&&f.hp>t.a.atk*1.5);if(target){t.cmd='seal';t.tg=B.F.indexOf(target);return}}
   if(canCast(t,'g')&&enemies.length>=2){t.cmd='g';return}
@@ -705,6 +708,7 @@ function hurtPet(t,d){
   if(t.hp<=0)return 0;const actual=Math.min(t.hp,d);t.hp=Math.max(0,t.hp-d);
   if(t.hp>0)return actual;
   if(t.p.ab==2&&!t.used){t.hp=1;t.used=1;LOGL.push(t.p.n+'发动不屈，保留1点气血');return actual}
+  t.tauntUntil=0;
   if(t.p.sk.includes('神佑')&&!t.reviveUsed){
     t.reviveUsed=1;
     if(Math.random()<.3){t.hp=Math.max(1,Math.round(t.mx*.4));t.stun=0;t.revivedRound=B.r;LOGL.push(t.p.n+'触发神佑！复活并恢复'+t.hp+'气血');return actual}
@@ -740,6 +744,7 @@ function pAct(t){
         L.push('　'+ally.p.n+'恢复'+healPet(ally,healingAmount(ally))+'气血');return;
       }
       if(t.cmd=='buff'){alive(B.T).forEach(x=>x.guardUntil=B.r+1);L.push('　全队获得护佑：本回合及下回合减伤25%');return}
+      if(t.cmd=='taunt'){B.T.forEach(x=>x.tauntUntil=0);t.tauntUntil=B.r+1;L.push('　'+p.n+'吸引敌方单体攻击，持续至第'+t.tauntUntil+'回合结束；群攻不受影响');return}
       let f=B.F[t.tg];if(!f||f.hp<=0)f=al.slice().sort((x,y)=>x.hp-y.hp)[0];
       if(t.cmd=='seal'){
         if(f.controlImmuneUntil>=B.r||f.stun){L.push('　'+f.n+'暂时免疫定身');return}
@@ -782,7 +787,7 @@ function fAct(f){
   };
   if(burst){LOGL.push('💥 '+f.n+'释放蓄力群攻！');for(const t of al){if(f.hp<=0)break;hit(t,1.35,'蓄力震击')}}
   else if(!f.boss&&has('群攻')&&Math.random()<.3){LOGL.push(f.n+'发动群攻！');for(const t of al){if(f.hp<=0)break;hit(t,.5,'震击')}}
-  else{const lo=al.slice().sort((x,y)=>x.hp-y.hp)[0];hit(Math.random()<.4?lo:pick(al),1)}
+  else{const taunter=al.find(t=>t.tauntUntil>=B.r),lo=al.slice().sort((x,y)=>x.hp-y.hp)[0];if(taunter)LOGL.push('　'+f.n+'受到嘲讽，攻击'+taunter.p.n);hit(taunter||(Math.random()<.4?lo:pick(al)),1)}
   if(f.hp<=0)LOGL.push('　'+f.n+'倒下');
 }
 function endCheck(){if(!alive(B.F).length){bend(1);return 1}if(!alive(B.T).length){bend(0);return 1}return 0}
