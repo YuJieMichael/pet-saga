@@ -57,6 +57,7 @@ button.b:disabled{opacity:.5}
 <body>
 <div id="app">
   <div class="top"><div class="pill" id="coins"></div><div class="pill" id="gems"></div></div>
+  <div id="exp-boost-status" class="card sub" role="status" hidden></div>
   <div class="tabs" id="tabs"></div>
   <div id="main"></div>
 </div>
@@ -73,7 +74,7 @@ const fighter=p=>{const a=stats(p),mm=maxMana(p);return{p,a,hp:a.hp,mx:a.hp,mp:m
 const intent=f=>!f.boss?'':f.stun?'被定身：下次行动跳过':f.phase=='burst'?'⚠️ 下回合：蓄力群攻':f.phase=='charge'?'下回合：蓄力（不攻击）':'下回合：'+((f.sk||[]).includes('治疗')&&f.hp<f.mx*.5?'自我治疗':'普通攻击');
 const MEDICINE={h:'red',u:'blue'};
 const targetSide=c=>c=='a'?'enemy':MEDICINE[c]?'ally':CAST[c]?.target;
-const ITEMS={red:{n:'红药',e:'🔴',price:10,currency:'coins',desc:'战斗中恢复一名存活队友40%气血，占用一次行动。'},blue:{n:'蓝药',e:'🔵',price:15,currency:'coins',desc:'战斗中恢复一名存活队友40%魔法，占用一次行动。'},exp:{n:'经验丹',e:'✨',price:100,currency:'coins',desc:'让选中的宠物升1级，满级宠物不能使用。'},life:{n:'长寿丹',e:'🌿',price:20,currency:'gems',desc:'为选中的宠物增加100寿命。'}};
+const ITEMS={red:{n:'红药',e:'🔴',price:10,currency:'coins',desc:'战斗中恢复一名存活队友40%气血，占用一次行动。'},blue:{n:'蓝药',e:'🔵',price:15,currency:'coins',desc:'战斗中恢复一名存活队友40%魔法，占用一次行动。'},exp:{n:'经验丹',e:'✨',price:100,currency:'coins',desc:'使用后全队战斗经验+100%，持续1小时；重复使用延长时间。'},life:{n:'长寿丹',e:'🌿',price:20,currency:'gems',desc:'为选中的宠物增加100寿命。'}};
 const POTION_PARTS={redPart:{n:'红药碎片',e:'🟥',target:'red',need:5,rate:[.45,.75]},bluePart:{n:'蓝药碎片',e:'🟦',target:'blue',need:5,rate:[.35,.65]}};
 const LOOT=[{id:'red',n:'红药',e:'🔴',rate:[.25,.5],qty:[1,2]},{id:'blue',n:'蓝药',e:'🔵',rate:[.2,.4],qty:[1,2]},{id:'exp',n:'经验丹',e:'✨',rate:[.01,.04],qty:[1,1]},{id:'life',n:'长寿丹',e:'🌿',rate:[.003,.01],qty:[1,1]},{id:'shard',n:'进化石碎片',e:'🧩',rate:[.05,.2],qty:[1,2]},{id:'stone',n:'进化石',e:'🪨',rate:[.002,.03],qty:[1,1]},...Object.entries(POTION_PARTS).map(([id,p])=>({id,n:p.n,e:p.e,rate:p.rate,qty:[1,3]}))];
 const BADSK=ELS.map(e=>'弱'+e),OLD_BADSK=['虚弱','迟钝','薄甲'],WEAK_SP=[0,1,5,8],weakFor=el=>'弱'+ELS[BEAT.indexOf(el)],SKN=Object.keys(SK).filter(k=>!BADSK.includes(k)),AN=['攻击','防御','体力','法力','速度'],TN=['体质','魔力','力量','耐力','敏捷'],QN=['野生','宝宝','变异'];
@@ -267,11 +268,19 @@ function lootHistory(){
   return`<div class="card"><h3>🎁 最近掉落</h3><div class="sub">保留最近6次有掉落的战斗，自动挂机的收获也会记录。</div>${S.lootLog.length?S.lootLog.map(entry=>`<div class="sub" style="margin-top:10px;line-height:1.7"><b>${entry.where}${entry.boss?' · Boss':''}</b> · ${new Date(entry.time).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})}<br>${entry.items.map(lootItemText).join('、')}${entry.crafted?'<br>碎片合成进化石 ×'+entry.crafted:''}</div>`).join(''):'<div class="sub" style="margin-top:8px">还没有掉落记录，赢得战斗后有机会获得道具。</div>'}</div>`;
 }
 const battleExpPool=(foes,mode=S.mode)=>mode=='hunt'?(2+huntInfo().st*3)*8:foes[1].lv*8*(foes[1].b?2:1);
+const expBoostMultiplier=()=>S.expBoostUntil>Date.now()?2:1;
+let EXP_BOOST_ACTIVE=false;
+function updateExpBoostStatus(){
+  const remaining=Math.max(0,Math.ceil(((S.expBoostUntil||0)-Date.now())/1000)),el=$('exp-boost-status');
+  EXP_BOOST_ACTIVE=remaining>0;if(!el)return;el.hidden=!EXP_BOOST_ACTIVE;
+  if(remaining){const h=Math.floor(remaining/3600),m=Math.floor(remaining%3600/60),s=remaining%60;el.textContent='✨ 战斗经验 +100% · 剩余 '+[h,m,s].map(n=>String(n).padStart(2,'0')).join(':')}
+}
 function rewardBattleExp(total){
   const pets=B.T.map(t=>t.p),n=pets.length;if(!n)return'无参战宠物';
+  const multiplier=expBoostMultiplier();total*=multiplier;
   const each=Math.floor(total/n),remainder=total%n;let up=0;
   const shares=pets.map((p,i)=>{const amount=each+(i<remainder?1:0);up+=gain(p,amount);return p.n+' +'+amount});
-  return'战斗总经验 '+total+'，'+n+'只参战平分：'+shares.join('、')+(up?'（共升级'+up+'次）':'');
+  return'战斗总经验 '+total+(multiplier==2?'（经验丹 +100%）':'')+'，'+n+'只参战平分：'+shares.join('、')+(up?'（共升级'+up+'次）':'');
 }
 function twin(){
   const e=B.F[1],c=e.lv*14*(e.b?3:1),ex=battleExpPool(B.F,'tower');
@@ -292,6 +301,7 @@ function save(){try{localStorage.setItem('petsaga2',JSON.stringify(S))}catch(e){
 function load(){try{const r=localStorage.getItem('petsaga2');if(r)S=Object.assign(S,JSON.parse(r))}catch(e){}}
 const normalizePotionThreshold=v=>v==null||!Number.isFinite(Number(v))?20:Math.min(95,Math.max(0,Math.round(Number(v)/5)*5));
 function initBag(){
+  const expiry=Number(S.expBoostUntil);S.expBoostUntil=Number.isFinite(expiry)?Math.max(0,expiry):0;
   const valid=S.bag&&typeof S.bag=='object'&&!Array.isArray(S.bag);
   if(!valid)S.bag={red:S.pot===undefined?3:S.pot,blue:3,exp:0,life:0};
   for(const key of [...Object.keys(ITEMS),...Object.keys(POTION_PARTS)]){const n=Number(S.bag[key]);S.bag[key]=Number.isFinite(n)?Math.max(0,Math.floor(n)):0}
@@ -356,11 +366,11 @@ function buyItem(id,n){
   S[item.currency]-=cost;addItem(id,n);toast(item.n+' ×'+n+' 已放入背包');
 }
 function useGrowthItem(id,p){
-  if(!p||!['exp','life'].includes(id))return;
+  if(B.run||!['exp','life'].includes(id)||id=='life'&&!p)return;
   if(!itemCount(id))return toast('背包里没有'+ITEMS[id].n);
-  if(id=='exp'&&p.lv>=60)return toast('宠物已满级，不消耗经验丹');
-  S.bag[id]--;if(id=='exp')gain(p,Math.round(p.lv*p.lv*1.65)-p.exp);else p.life+=100;
-  toast(p.n+(id=='exp'?'升了1级':'寿命增加100'));
+  S.bag[id]--;
+  if(id=='exp'){S.expBoostUntil=Math.max(Date.now(),S.expBoostUntil||0)+3600000;toast('战斗经验 +100%，有效时间增加1小时')}
+  else{p.life+=100;toast(p.n+'寿命增加100')}
 }
 const medicineLeft=c=>Math.max(0,itemCount(MEDICINE[c])-(B.run?B.T.filter(t=>t.cmd==c&&t.hp>0).length:0));
 const medicineNeeded=(c,t)=>!!t&&t.hp>0&&(c=='h'?t.hp<t.mx:t.mp<t.mm);
@@ -385,7 +395,8 @@ function bagView(){
 }
 function bagDetailView(it){
   const pet=get(S.sel);let action='';
-  if(it.kind=='growth')action=`<div class="sub" style="margin-top:10px">使用对象：${pet?pet.n+' · Lv'+pet.lv:'请选择宠物'}${B.run?' · 战斗中暂不可使用':''}</div><div class="row bag-picker">${S.pets.map(p=>`<button class="pc ${p.id===S.sel?'sel':''}" data-a="sel" data-v="${p.id}" ${B.run?'disabled':''}>${emo(p)} ${p.n}<br>Lv${p.lv}</button>`).join('')}</div><button class="b" style="margin-top:10px" data-a="useitem" data-v="${it.id}" ${B.run||!pet||it.id=='exp'&&pet.lv>=60?'disabled':''}>${it.id=='exp'&&pet?.lv>=60?'宠物已满级':'使用1颗'}</button>`;
+  if(it.id=='exp')action=`<div class="sub battle-help">全队生效，主线、无尽塔、悬赏战斗均有效。重复使用延长时间，倍率保持+100%；按胜利结算时是否生效计算。离线期间继续计时，离线收益不加成。</div><button class="b" style="margin-top:10px" data-a="useitem" data-v="exp" ${B.run?'disabled':''}>${expBoostMultiplier()==2?'使用1颗 · 延长1小时':'使用1颗 · 开启1小时'}</button>${B.run?'<div class="sub">战斗结束后可使用。</div>':''}`;
+  else if(it.kind=='growth')action=`<div class="sub" style="margin-top:10px">使用对象：${pet?pet.n+' · Lv'+pet.lv:'请选择宠物'}${B.run?' · 战斗中暂不可使用':''}</div><div class="row bag-picker">${S.pets.map(p=>`<button class="pc ${p.id===S.sel?'sel':''}" data-a="sel" data-v="${p.id}" ${B.run?'disabled':''}>${emo(p)} ${p.n}<br>Lv${p.lv}</button>`).join('')}</div><button class="b" style="margin-top:10px" data-a="useitem" data-v="${it.id}" ${B.run||!pet?'disabled':''}>使用1颗</button>`;
   else if(it.kind=='pack')action=`${it.packId=='books'?`<details class="sub battle-help"><summary>可能获得的技能书</summary>${SKN.filter(k=>bookGrade(k)=='low').join('、')}<br>每本概率 1/${SKN.filter(k=>bookGrade(k)=='low').length}。</details>`:''}<div class="row" style="margin-top:10px"><button class="b" data-a="openpack" data-v="${it.packId},1" ${B.run?'disabled':''}>打开1个</button>${it.qty>1?`<button class="b alt" data-a="openpack" data-v="${it.packId},5" ${B.run?'disabled':''}>打开${Math.min(5,it.qty)}个</button>`:''}</div>${B.run?'<div class="sub">战斗结束后可打开礼包。</div>':''}`;
   else if(Object.hasOwn(POTION_PARTS,it.id)){
     const part=POTION_PARTS[it.id],count=Math.floor(it.qty/part.need),remainder=it.qty%part.need;
@@ -399,13 +410,16 @@ function skinShopView(){
   const skin=SKINS.green,pet=get(S.sel),owned=S.skins.includes('green'),wearing=owned&&pet?.skin=='green';
   return`<div class="card"><h3>🎨 宠物皮肤 · ${skin.n} ${owned?'<span class="tag">已解锁</span>':''}</h3><p class="skin-copy">“${skin.desc}”</p><div class="sub">一次解锁，全宠通用，可给多只宠物穿戴。纯外观，属性、五行和变异品质保持原样。</div><div class="row bag-picker">${S.pets.map(p=>`<button class="pc ${p.id===S.sel?'sel':''}" data-a="sel" data-v="${p.id}" aria-pressed="${p.id===S.sel}" ${B.run?'disabled':''}>${emo(p)} ${p.n}</button>`).join('')}</div>${pet?`<div class="skin-preview"><div>${petPortrait(pet)}<small>原色</small></div><span aria-hidden="true">→</span><div>${petPortrait(pet,'green')}<small>整成绿的</small></div></div><div class="sub" style="margin-bottom:10px">换装对象：${pet.n}${wearing?' · 已穿戴':''}</div>`:''}<div class="row">${owned?`<button class="b" data-a="skinequip" data-v="green" ${B.run||!pet||wearing?'disabled':''}>${wearing?'已穿戴':'穿上皮肤'}</button><button class="b alt" data-a="skinequip" data-v="original" ${B.run||!pet||!pet.skin?'disabled':''}>恢复原色</button>`:`<button class="b" data-a="skinbuy" data-v="green" ${B.run||!pet||S.gems<skin.price?'disabled':''}>解锁并穿上 · ${skin.price}💎</button>${S.gems<skin.price?'<span class="sub">钻石不足</span>':''}`}</div><div class="sub battle-help">解锁记录随当前浏览器存档保存；已解锁后换装免费。</div></div>`;
 }
+function shopPetPicker(action){
+  return`<div><div class="sub">选择使用对象</div><div class="row bag-picker">${S.pets.map(p=>`<button class="pc ${p.id===S.sel?'sel':''}" data-a="sel" data-v="${p.id}" aria-pressed="${p.id===S.sel}" ${B.run?'disabled':''}>${emo(p)} ${p.n}<br>${action=='nat'?NAT[p.nat][0]:AB[p.ab][0]}</button>`).join('')}</div></div>`;
+}
 function shopView(){
   const coins=SHOP_CURRENCY=='coins',currency=coins?'coins':'gems',symbol=coins?'🪙':'💎',pet=get(S.sel);
   const goods=Object.entries(ITEMS).filter(([,it])=>it.currency===currency).map(([id,it])=>{const qty=['red','blue'].includes(id)?3:1;return{n:it.n,e:it.e,desc:it.desc,price:it.price*qty,qty,action:'buyitem',value:id+','+qty,stock:itemCount(id)}});
   for(const [id,p] of Object.entries(PACKS)){if(p.currency===currency)goods.push({...p,qty:1,action:'buypack',value:id,stock:packCount(id)})}
   if(coins)goods.push({n:'进化石',e:'🪨',desc:'用于宠物进化，购买后放入背包。',price:600,qty:1,action:'stone',stock:S.stone},{n:'性格药',e:'🧪',desc:'购买后立即重随 '+(pet?pet.n:'选中宠物')+' 的性格。',price:200,qty:1,action:'nat',needsPet:true});
   else goods.push({n:'特性胶囊',e:'💊',desc:'购买后立即重随 '+(pet?pet.n:'选中宠物')+' 的特性。',price:8,qty:1,action:'ab',needsPet:true});
-  return`<div class="card"><div class="shop-tabs">${[['coins','🪙 金币商店'],['gems','💎 钻石商店']].map(([id,n])=>`<button class="b ${SHOP_CURRENCY===id?'':'alt'}" data-a="shopcurrency" data-v="${id}" aria-pressed="${SHOP_CURRENCY===id}">${n}</button>`).join('')}</div><div class="sub">余额 ${symbol}${S[currency]}${B.run?' · 战斗中暂停购买':''}</div></div>${coins?'':skinShopView()}<div class="card"><div class="bag-grid">${goods.map(g=>`<div class="bag-item shop-product"><h3>${g.e} ${g.n}</h3><div class="sub">${g.desc}${g.stock!==undefined?'<br>持有 '+g.stock:''}</div><button class="b" data-a="${g.action}" ${g.value?`data-v="${g.value}"`:''} ${B.run||S[currency]<g.price||g.needsPet&&!pet?'disabled':''}>${g.needsPet?'购买并使用':'购买 ×'+g.qty} · ${g.price}${symbol}</button></div>`).join('')}</div></div><div class="card"><h3>${coins?'金币补充':'钻石补充'}</h3><div class="row">${coins?'<button class="b alt" data-a="ad" '+(B.run?'disabled':'')+'>看广告 +100🪙（模拟）</button>':'<button class="b alt" data-a="daily" '+(B.run?'disabled':'')+'>每日领取 +10💎</button><button class="b alt" data-a="iap" '+(B.run?'disabled':'')+'>60💎 · $0.99（演示，不扣费）</button>'}</div></div><details class="card"><summary>存档管理</summary><button class="b alt" style="margin-top:10px" data-a="reset" ${B.run?'disabled':''}>重置存档</button></details>`;
+  return`<div class="card"><div class="shop-tabs">${[['coins','🪙 金币商店'],['gems','💎 钻石商店']].map(([id,n])=>`<button class="b ${SHOP_CURRENCY===id?'':'alt'}" data-a="shopcurrency" data-v="${id}" aria-pressed="${SHOP_CURRENCY===id}">${n}</button>`).join('')}</div><div class="sub">余额 ${symbol}${S[currency]}${B.run?' · 战斗中暂停购买':''}</div></div>${coins?'':skinShopView()}<div class="card"><div class="bag-grid">${goods.map(g=>`<div class="bag-item shop-product"><h3>${g.e} ${g.n}</h3><div class="sub">${g.desc}${g.stock!==undefined?'<br>持有 '+g.stock:''}</div>${g.needsPet?shopPetPicker(g.action):''}<button class="b" data-a="${g.action}" ${g.value?`data-v="${g.value}"`:''} ${B.run||S[currency]<g.price||g.needsPet&&!pet?'disabled':''}>${g.needsPet?'购买并使用':'购买 ×'+g.qty} · ${g.price}${symbol}</button></div>`).join('')}</div></div><div class="card"><h3>${coins?'金币补充':'钻石补充'}</h3><div class="row">${coins?'<button class="b alt" data-a="ad" '+(B.run?'disabled':'')+'>看广告 +100🪙（模拟）</button>':'<button class="b alt" data-a="daily" '+(B.run?'disabled':'')+'>每日领取 +10💎</button><button class="b alt" data-a="iap" '+(B.run?'disabled':'')+'>60💎 · $0.99（演示，不扣费）</button>'}</div></div><details class="card"><summary>存档管理</summary><button class="b alt" style="margin-top:10px" data-a="reset" ${B.run?'disabled':''}>重置存档</button></details>`;
 }
 function card(p,extra){return`<button class="pc ${p.q==2?'gold':''} ${S.sel===p.id?'sel':''}" data-a="${extra||'sel'}" data-v="${p.id}"><b>${emo(p)}</b>${p.n}<br>Lv${p.lv}${p.ev?' ★'+p.ev:''}${S.team.includes(p.id)?' ⭐':''}${p.job?' ⏳':''}${p.q?' <span class="tag">'+QN[p.q]+'</span>':''}${isGatherer(p)?' ⛏':''}</button>`}
 function aptitudeRange(p,i){
@@ -466,10 +480,10 @@ function view(){
   if(t=='dex')return dexView();
   if(t=='quest')return questView();
   if(t=='fight'){
-    const e=enemy(S.stage),tw=S.mode=='tower',hunt=S.mode=='hunt',F=B.F||curFoes(),T=B.T||S.team.map(get).filter(p=>p&&p.life>0).map(fighter),cur=B.run?B.T[B.pi]:null,totalExp=battleExpPool(F);
+    const e=enemy(S.stage),tw=S.mode=='tower',hunt=S.mode=='hunt',F=B.F||curFoes(),T=B.T||S.team.map(get).filter(p=>p&&p.life>0).map(fighter),cur=B.run?B.T[B.pi]:null,totalExp=battleExpPool(F)*expBoostMultiplier();
     return`${modeBar()}${tw?towerCard():hunt?huntCard():`<div class="card"><h3>世界地图 🏅${S.badges.length}/6${S.ng?' · 第'+(S.ng+1)+'周目':''}</h3><div class="row">${REG.map((r,i)=>`<button class="b ${e.ri===i?'':'alt'}" data-a="reg" data-v="${i}">${S.badges.includes(i)?'🏅':''}${r.n}${S.maxStage<i*5+1?' 🔒':''}</button>`).join('')}</div><div class="sub" style="margin-top:6px">${e.map}：${ELC[e.el]}${ELS[e.el]}系 · 馆主 ${REG[e.ri].e}${REG[e.ri].g}（第${e.ri*5+5}关）· 推荐带 ${ELC[BEAT.indexOf(e.el)]}${ELS[BEAT.indexOf(e.el)]}系宠物克制。首次击败馆主获得徽章：全队属性+2%、💎15。</div>${S.badges.length>=6?`<div class="row" style="margin-top:8px"><button class="b" data-a="ng">开启第${S.ng+2}周目：敌人更强、技能更多、奖励+50%</button></div>`:''}</div>
     <div class="card"><div class="row" style="justify-content:space-between"><button class="b alt" data-a="st" data-v="-1">◀</button><b>第 ${S.stage} 关 · ${e.map}</b><button class="b alt" data-a="st" data-v="1">▶</button></div><div class="sub" style="text-align:center;margin-top:4px">已解锁至第 ${S.maxStage} 关${e.b?' · BOSS关':''} · 奖励 ${Math.round(e.lv*12*(e.b?3:1)*(1+.5*S.ng))}🪙 · 在宠物页上阵最多3只</div></div>
-    `}${!tw&&!hunt?`<div class="card"><button class="b ${S.farmOn?'':'alt'}" data-a="farm">${S.farmOn?'停止连续自动':'开启连续自动'}</button><div class="sub" style="margin-top:6px">${S.farmOn?(S.farmHold?'固定刷第 '+S.stage+' 关':'自动挑战新关；失败后退回上一关持续刷'):'连续自动只在页面打开时运行；退到后台按离线收益结算。'}</div></div>`:''}${!hunt||S.hunt.clears<3?`<div class="card sub">本场总经验 <b>${totalExp}</b> · ${T.length?'按 '+T.length+' 只参战平分，每只 '+Math.floor(totalExp/T.length)+(totalExp%T.length?'～'+Math.ceil(totalExp/T.length):'')+' 点':'请先上阵可参战宠物'}<br>胜利后结算，倒下的参战宠物也能获得经验。</div>`:''}${battleArena(F,T,cur)}
+    `}${!tw&&!hunt?`<div class="card"><button class="b ${S.farmOn?'':'alt'}" data-a="farm">${S.farmOn?'停止连续自动':'开启连续自动'}</button><div class="sub" style="margin-top:6px">${S.farmOn?(S.farmHold?'固定刷第 '+S.stage+' 关':'自动挑战新关；失败后退回上一关持续刷'):'连续自动只在页面打开时运行；退到后台按离线收益结算。'}</div></div>`:''}${!hunt||S.hunt.clears<3?`<div class="card sub">本场总经验 <b>${totalExp}</b>${expBoostMultiplier()==2?'（含经验丹+100%）':' '} · ${T.length?'按 '+T.length+' 只参战平分，每只 '+Math.floor(totalExp/T.length)+(totalExp%T.length?'～'+Math.ceil(totalExp/T.length):'')+' 点':'请先上阵可参战宠物'}<br>胜利后结算，倒下的参战宠物也能获得经验。</div>`:''}${battleArena(F,T,cur)}
     ${B.run?battleCommands(cur):hunt&&S.hunt.clears>=3?'<div class="sub">今日悬赏已完成，明天刷新。</div>':'<button class="b" style="width:100%;padding:12px" data-a="bstart">开始战斗</button>'}<div class="card" style="margin-top:10px"><div class="sub">战斗补给：🔴 红药 ×${itemCount('red')} · 🔵 蓝药 ×${itemCount('blue')} · 在金币商店补充</div>${potionSettings()}</div>`;
   }
   if(t=='catch'){
@@ -483,6 +497,7 @@ function view(){
   return shopView();
 }
 function render(){
+  updateExpBoostStatus();
   $('coins').textContent='🪙 '+S.coins;$('gems').textContent='💎 '+S.gems;
   $('tabs').innerHTML=TABS.map(t=>{const main=t[0]=='pets'||t[0]=='bag',home=t[0]=='pets';return`<button class="${main?'nav-main ':''}${S.tab===t[0]?'on':''}" data-a="tab" data-v="${t[0]}" ${S.tab===t[0]?'aria-current="page"':''}>${main?`<span class="nav-icon" aria-hidden="true">${home?'🏠':'🎒'}</span><span><strong>${home?'首页':'背包'}</strong><small>${home?'宠物与队伍':'道具与技能书'}</small></span>`:t[1]}${(t[0]=='idle'&&S.off)||(t[0]=='quest'&&claimable())?'🔴':''}</button>`}).join('');
   $('main').innerHTML=view();
@@ -873,6 +888,7 @@ dqRoll();S.pets.forEach(dx);if(!get(S.sel))S.sel=S.pets[0].id;if(S.mode!='main')
 render();if(S.farmOn)scheduleFarm();
 document.addEventListener('visibilitychange',()=>{if(document.hidden){if(FARM_TIMER)clearTimeout(FARM_TIMER);stopAutoRun();S.last=Date.now();save()}else{checkOff();if(S.farmOn){if(B.run)autoRun();else scheduleFarm()}render()}});
 setInterval(()=>{if(!document.hidden&&!B.run){S.last=Date.now();save();if(S.tab=='idle')render()}},5000);
+setInterval(()=>{if(document.hidden)return;const was=EXP_BOOST_ACTIVE;updateExpBoostStatus();if(was!==EXP_BOOST_ACTIVE)render()},1000);
 </script>
 </body>
 </html>
