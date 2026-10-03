@@ -134,6 +134,10 @@ const REG=[{n:'大唐境外',g:'强盗王',el:4,e:'🤠'},{n:'东海湾',g:'龙�
 const NAT=[['勇敢','atk','spd','攻击+10% 速度-10%'],['沉稳','def','atk','防御+10% 攻击-10%'],['活泼','spd','def','速度+10% 防御-10%'],['聪慧','mag','hp','法攻+10% 气血-10%'],['坚韧','hp','mag','气血+10% 法攻-10%'],['平和',null,null,'无加成']];
 const AB=[['先手','每回合最先行动'],['逆境','气血低于40%时伤害+30%'],['不屈','每场战斗一次，受致命伤时保留1点气血'],['厚皮','受到伤害-12%'],['破甲','大幅削弱敌人防御'],['激励','在场时全队伤害+8%']];
 const EVN=[['应龙','龙神'],['玄龟','玄武'],['灵狸','神狸'],['猛虎','白虎'],['金燕','凤凰'],['灵蛙','蛙王'],['仙鹿','神鹿'],['狮王','战神狮'],['炎龙','焚天龙']];
+const defaultPetName=p=>(p.q==2?'变异':'')+(p.ev?EVN[p.sp][p.ev-1]:SP[p.sp].n);
+const validPetName=name=>typeof name=='string'&&[...name].length>=1&&[...name].length<=12&&/^[\p{L}\p{N}\p{M} ·_-]+$/u.test(name);
+const refreshPetName=p=>{p.n=p.nickname||defaultPetName(p)};
+function renameView(p){return`<details class="battle-help"><summary>✏️ 改名${p.nickname?' · 原名：'+defaultPetName(p):''}</summary><form id="pet-rename-form" data-pet-id="${p.id}" style="margin-top:10px"><label for="pet-name" class="sub">免费改名 · 1–12个字符，可用中文、字母、数字、空格、·、_、-</label><div class="row" style="margin-top:8px"><input id="pet-name" name="petName" type="text" value="${p.n}" required autocomplete="off" aria-label="宠物新名字" style="flex:1;min-width:120px;padding:10px;border:1px solid var(--line);border-radius:10px;font:inherit" ${B.run?'disabled':''}><button class="b" type="submit" ${B.run?'disabled':''}>确认改名</button>${p.nickname?`<button class="b alt" type="button" data-a="renamereset" ${B.run?'disabled':''}>恢复原名</button>`:''}</div><div class="sub" style="margin-top:6px">进化和洗炼保留名字；炼化生成的新宠使用种族名。</div></form></details>`}
 const DEXM=[[10,'🪙300'],[20,'💎10'],[30,'进化石x3'],[40,'💎30']];
 const petPortrait=(p,skin='')=>`<span class="pet-sprite ${skin=='green'?'skin-green':''}" role="img" aria-label="${SP[p.sp].n}${skin=='green'?'，整成绿的皮肤':''}">${SP[p.sp].e}</span>`+(p.ev>1?'✨':'');
 const emo=p=>petPortrait(p,S.skins?.includes(p.skin)?p.skin:'');
@@ -379,7 +383,7 @@ function washPet(id,p){
   fresh.sk=fresh.sk.slice(0,count);
   for(const m of EV_AP.slice(0,p.ev||0)){fresh.ap=fresh.ap.map(v=>Math.round(v*m));fresh.g=+(fresh.g+.05).toFixed(3)}
   S.bag[id]--;p.q=q;p.ap=fresh.ap;p.g=fresh.g;p.sk=fresh.sk;
-  p.n=(q==2?'变异':'')+(p.ev?EVN[p.sp][p.ev-1]:SP[p.sp].n);
+  refreshPetName(p);
   S.washResult={before,after:washSnapshot(p)};dx(p);S.tab='cultivate';toast('洗炼完成，可查看前后对比');
 }
 function addItem(id,n){if((Object.hasOwn(ITEMS,id)||Object.hasOwn(POTION_PARTS,id))&&Number.isInteger(n)&&n>0)S.bag[id]=itemCount(id)+n}
@@ -545,6 +549,7 @@ function detail(p){
   const draft=pointDraft(p),pending=draft.reduce((a,b)=>a+b,0),left=p.fp-pending;
   const s=stats({...p,at:p.at.map((v,i)=>v+draft[i])}),sl=slots(p);
   return`<div class="card"><h3>${emo(p)} ${p.n} · Lv${p.lv} <span class="tag ${p.q==2?'g':''}">${QN[p.q]}</span></h3>
+  ${renameView(p)}
   <div class="sub">${isGatherer(p)?`⛏ 采集型：探险采矿金币+${p.q==2?40:25}%<br>`:''}五行 ${ELC[p.el]}${ELS[p.el]} · 经验 ${p.exp}/${Math.round(p.lv*p.lv*1.65)} · 成长率 ${p.g} · 忠诚 ${p.loy}<br>性格 ${NAT[p.nat][0]}（${NAT[p.nat][3]}）· 特性 ${AB[p.ab][0]}：${AB[p.ab][1]}${p.loy<60?' ⚠️属性-15%':''}</div>
   ${aptitudeView(p)}
   <div class="grid2" style="margin-bottom:8px"><span>气血 <b>${s.hp}</b></span><span>攻击 <b>${s.atk}</b></span><span>防御 <b>${s.def}</b></span><span>法攻 <b>${s.mag}</b></span><span>速度 <b>${s.spd}</b></span><span>可用点数 <b>${left}</b></span></div>
@@ -870,6 +875,14 @@ function act(a,v){
   const p=get(S.sel);
   if(a!=='washapply')WASH_CONFIRM=null;
   if(a=='tab'){S.tab=v;REL=0}
+  else if(a=='rename'&&p){
+    const form=$('pet-rename-form');if(!form||Number(form.dataset.petId)!==p.id)return;
+    const name=$('pet-name').value.normalize('NFC').trim();
+    if(!validPetName(name))return toast('请输入1–12个字符，仅支持中文、字母、数字、空格、·、_、-');
+    if(name===defaultPetName(p))delete p.nickname;else p.nickname=name;
+    refreshPetName(p);toast('已改名为「'+p.n+'」');
+  }
+  else if(a=='renamereset'&&p){delete p.nickname;refreshPetName(p);toast('已恢复原名「'+p.n+'」')}
   else if(a=='washprepare'){
     if(!p||!Object.hasOwn(WASH_ITEMS,v)||v!==washItemFor(p))return;
     if(p.job||isExploring(p.id))return toast('请先收回派遣或探险中的宠物');
@@ -953,7 +966,7 @@ function act(a,v){
     const r=evoReq(p);if(!r)return toast('已是最终形态');
     if(p.lv<r.lv)return toast('需要 Lv'+r.lv);if(p.loy<80)return toast('忠诚度需≥80，请喂食');
     if(S.coins<r.c)return toast('金币不足');if(S.stone<r.st)return toast('进化石不足');
-    S.coins-=r.c;S.stone-=r.st;p.ev++;p.n=(p.q==2?'变异':'')+EVN[p.sp][p.ev-1];
+    S.coins-=r.c;S.stone-=r.st;p.ev++;refreshPetName(p);
     const m=EV_AP[p.ev-1];p.ap=p.ap.map(v=>Math.round(v*m));p.g=+(p.g+.05).toFixed(3);p.fp+=10;dx(p);toast('进化成功: '+p.n+'!');
   }
   else if(a=='reg'){const i=+v;if(S.maxStage<i*5+1)return toast('需先通关上一区域');S.farmOn=false;S.farmHold=false;if(FARM_TIMER)clearTimeout(FARM_TIMER);stopAutoRun();B={run:0};LOGL=[];S.stage=Math.max(i*5+1,Math.min(S.maxStage,i*5+5))}
@@ -1012,10 +1025,12 @@ function act(a,v){
   save();render();
   if(a=='fuse'&&FUSION_RESULT_OPEN)$('fusion-result')?.scrollIntoView({block:'start',behavior:'smooth'});
 }
+document.addEventListener('submit',e=>{if(e.target.id==='pet-rename-form'){e.preventDefault();act('rename')}});
 document.addEventListener('click',e=>{if(Date.now()<ROSTER_NO_CLICK_UNTIL){e.preventDefault();return}const b=e.target.closest('[data-a]');if(b)act(b.dataset.a,b.dataset.v)});
 load();initBag();initSkins();S.xps=Array.isArray(S.xps)?S.xps:[null,null,null];while(S.xps.length<3)S.xps.push(null);if(S.xp&&!S.xps.some(Boolean))S.xps[0]=S.xp;S.xlogs=Array.isArray(S.xlogs)?S.xlogs:[[],[],[]];while(S.xlogs.length<3)S.xlogs.push([]);if(S.xlog?.length&&!S.xlogs[0]?.length)S.xlogs[0]=S.xlog;S.xsel??={z:0,d:0,ids:[]};S.xsel.car??=0;delete S.xp;delete S.xlog;
 S.pets.forEach(p=>{
   p.el??=RI(0,4);p.xl??=[0,0,0];p.nd??=[];delete p.life;p.job??=0;p.ev??=0;p.nat??=RI(0,5);p.ab??=RI(0,5);p.sk??=[];
+  if(!validPetName(p.nickname))delete p.nickname;refreshPetName(p);
   const hadLegacy=p.sk.some(k=>OLD_BADSK.includes(k));p.sk=p.sk.filter(k=>!OLD_BADSK.includes(k));
   if(hadLegacy&&WEAK_SP.includes(p.sp)){const weakness=weakFor(p.el);if(!p.sk.includes(weakness)&&p.sk.length<slots(p))p.sk.push(weakness)}
 });checkOff();
