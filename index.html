@@ -50,6 +50,9 @@ button.b:disabled{opacity:.5}
 .hb.mp{height:5px;margin-top:4px}.hf.m{background:#4d8bcc}.intent{display:block;color:var(--acc);font-size:11px;margin:5px 0;font-weight:700}.battle-help{line-height:1.7;margin-top:8px}.fc.ally-target{border-color:#4aa360;cursor:pointer}
 .arena{display:grid;grid-template-columns:1fr 1fr;gap:12px;text-align:center}
 .arena b{font-size:42px;display:block}
+.battle-toolbar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}.battle-toolbar .b{padding:5px 9px}.battle-focus{background:var(--bg);border-left:4px solid var(--gold);border-radius:10px;padding:12px;min-height:92px;margin:10px 0}.battle-focus strong{display:block;font-size:17px;margin-bottom:5px}.battle-focus.special{border-color:var(--acc)}.fc{position:relative}.fc.acting{border-color:var(--gold);box-shadow:0 0 0 2px #e0a31c44}.fc.acting>b{animation:battle-cast .35s ease-out}.fc.hit{animation:battle-hit .35s ease-out}.fc.healed{box-shadow:0 0 0 2px #4aa36088}.battle-number{position:absolute;left:50%;top:20px;z-index:2;font-size:23px;font-weight:900;color:#cb352b;text-shadow:0 1px 2px var(--card);pointer-events:none;animation:battle-number .8s ease-out both}.battle-number.heal{color:#329447}.battle-number small{display:block;font-size:10px;white-space:nowrap}.battle-notes{line-height:1.5;font-size:12px;color:var(--sub)}
+@keyframes battle-cast{50%{transform:translateY(-7px) scale(1.13)}}@keyframes battle-hit{25%,75%{transform:translateX(-3px)}50%{transform:translateX(3px)}}@keyframes battle-number{0%{transform:translate(-50%,8px);opacity:0}20%,70%{opacity:1}100%{transform:translate(-50%,-20px);opacity:0}}
+@media(prefers-reduced-motion:reduce){.fc.acting>b,.fc.hit,.battle-number{animation:none}.battle-number{transform:translateX(-50%)}}
 #log{min-height:96px;font-size:12px;line-height:1.6;color:var(--sub);margin-top:8px}
 .team{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:4px 0 8px}.fc{background:var(--bg);border:2px solid transparent;border-radius:12px;padding:6px 2px;text-align:center;font-size:11px}.fc b{font-size:30px;display:block}.fc.dead{opacity:.35}.fc.cur{border-color:var(--gold)}.fc.tgt{border-color:var(--acc);cursor:pointer;animation:pl 1s infinite}@keyframes pl{50%{opacity:.6}}
 #toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#000d;color:#fff;padding:9px 16px;border-radius:20px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90%;text-align:center}
@@ -96,7 +99,7 @@ const ZONES=[
 const TABS=[['pets','🏠 首页'],['bag','🎒 背包'],['cultivate','📚 宠物培养'],['fight','⚔️ 战斗'],['catch','🌿 捕捉'],['fuse','🔮 炼化'],['idle','⏳ 挂机'],['quest','📋 任务'],['dex','📖 图鉴'],['shop','🛒 商店']];
 const R=(a,b)=>a+Math.random()*(b-a),RI=(a,b)=>Math.floor(R(a,b+1)),pick=a=>a[RI(0,a.length-1)],$=id=>document.getElementById(id);
 let S={coins:500,gems:30,last:0,off:null,team:[],dex:{},xps:[null,null,null],xsel:{car:0,z:0,d:0,ids:[]},xlogs:[[],[],[]],stone:0,shard:0,rep:'',dxc:[],badges:[],ng:0,floor:1,tower:0,hunt:{d:'',clears:0},farmOn:false,farmHold:false,mode:'main',dq:null,ac:[],cnt:{win:0,fuse:0,cap:0},bag:null,autoPotion:false,pets:[],active:0,nid:1,stage:1,maxStage:1,tab:'pets',sel:0,zone:0,mg:[],day:''};
-let B={run:0},LOGL=[],LAST=null,REL=0,AUTO_TIMER=null,FARM_TIMER=null;
+let B={run:0},LOGL=[],LAST=null,REL=0,AUTO_TIMER=null,FARM_TIMER=null,BATTLE_TIMER=null;
 const POINT_DRAFT=new Map();
 const pointDraft=p=>POINT_DRAFT.get(p.id)||[0,0,0,0,0];
 const APT_BANDS=[[.82,.95],[.96,1.06],[1.16,1.28]],EV_AP=[1.12,1.1];
@@ -312,6 +315,7 @@ function save(){try{localStorage.setItem('petsaga2',JSON.stringify(S))}catch(e){
 function load(){try{const r=localStorage.getItem('petsaga2');if(r)S=Object.assign(S,JSON.parse(r))}catch(e){}}
 const normalizePotionThreshold=v=>v==null||!Number.isFinite(Number(v))?20:Math.min(95,Math.max(0,Math.round(Number(v)/5)*5));
 function initBag(){
+  S.battleSpeed=[1,2,4].includes(S.battleSpeed)?S.battleSpeed:1;
   const expiry=Number(S.expBoostUntil);S.expBoostUntil=Number.isFinite(expiry)?Math.max(0,expiry):0;
   const valid=S.bag&&typeof S.bag=='object'&&!Array.isArray(S.bag);
   if(!valid)S.bag={red:S.pot===undefined?3:S.pot,blue:3,exp:0};
@@ -563,6 +567,7 @@ function detail(p){
   <div class="row" style="margin-top:10px"><button class="b alt" data-a="feed">喂食 15🪙</button><button class="b alt" data-a="wash">洗点 20🪙</button><button class="b alt" data-a="rel">${REL===p.id?'确认放生?':'放生'}</button></div></div>`;
 }
 function battleCommands(cur){
+  if(B.resolving)return`<div class="card"><div class="sub">正在逐个播放行动，回合结束后可下达指令。</div><button class="b alt" style="margin-top:8px" data-a="auto">${B.auto?'停止自动（本回合播完）':'开启后续自动'}</button></div>`;
   if(!cur)return '';
   const locked=B.auto?'disabled':'',skills=Object.entries(CAST).filter(([c,s])=>cur.p.sk.includes(s.skill));
   return `<div class="sub" style="margin-bottom:6px">${B.auto?'自动决策中':'指令：'+cur.p.n+'（'+(B.pi+1)+'/'+B.T.length+'）'} · 魔法 ${cur.mp}/${cur.mm}${B.pend?' · 请选择'+(targetSide(B.pend)=='ally'?(MEDICINE[B.pend]?'我方用药目标':'我方治疗目标'):'敌方目标'):''}</div><div class="row">
@@ -571,10 +576,16 @@ function battleCommands(cur){
   <button class="b alt" data-a="cmd" data-v="d" ${locked}>🛡 防御 · 回蓝8</button>${Object.entries(MEDICINE).map(([c,id])=>`<button class="b alt" data-a="cmd" data-v="${c}" ${B.auto||!medicineLeft(c)||B.tw&&wrule()==1?'disabled':''}>${ITEMS[id].e} ${ITEMS[id].n}×${medicineLeft(c)} · +${RECOVERY[id]}${id=='red'?'血':'蓝'}</button>`).join('')}
   ${B.pend?'<button class="b alt" data-a="cmd" data-v="x">取消选目标</button>':''}<button class="b alt" data-a="auto">${B.auto?'停止自动':'自动'}</button></div>`;
 }
+function battleUnitClass(unit){const change=B.fx?.changes?.find(x=>x.unit===unit);return(B.fx?.actor===unit?' acting':'')+(change?(change.delta<0?' hit':' healed'):'')}
+function battleNumber(unit){const change=B.fx?.changes?.find(x=>x.unit===unit);return change?`<span class="battle-number ${change.delta>0?'heal':''}">${change.delta>0?'+':''}${change.delta}<small>${change.delta>0?'回复':'气血减少'}</small></span>`:''}
+function battlePlaybackView(){
+  const fx=B.fx,round=B.r||0;
+  return`<div class="battle-toolbar"><b>⚔️ ${round?'第 '+round+' 回合':'准备战斗'}</b><div class="row" aria-label="战斗速度">${[1,2,4].map(speed=>`<button class="b ${S.battleSpeed==speed?'':'alt'}" data-a="battlespeed" data-v="${speed}" aria-pressed="${S.battleSpeed==speed}">${speed}×</button>`).join('')}</div></div><div class="battle-focus ${fx?.special?'special':''}" role="status" aria-live="polite"><strong>${fx?.title||(B.run?'选择指令，准备出手':'上阵宠物，开始冒险')}</strong><div class="battle-notes">${fx?.lines?.slice(-4).join('<br>')||'按速度逐个行动 · 技能、反震和治疗会逐步展示'}</div></div>`;
+}
 function battleArena(F,T,cur){
   const enemyTarget=!B.auto&&targetSide(B.pend)=='enemy',allyTarget=!B.auto&&targetSide(B.pend)=='ally',pct=x=>Math.max(0,x.hp)/x.mx*100;
-  return `<div class="card"><div class="sub">敌方${enemyTarget?'（点击选择目标）':''}</div><div class="team">${F.map((f,i)=>`<div class="fc ${f.hp<=0?'dead':''} ${enemyTarget&&f.hp>0?'tgt':''}" ${enemyTarget&&f.hp>0?`data-a="tgt" data-v="${i}"`:''}><b>${f.e}</b>${f.n} Lv${f.lv}${ELC[f.el]}<br><span class="sub">${(f.sk||[]).join(' ')}</span>${f.boss&&f.hp>0?`<span class="intent">${intent(f)}</span>`:''}${f.stun&&!f.boss?'<span class="tag">定身</span>':''}<div class="hb"><div class="hf e" style="width:${pct(f)}%"></div></div><span class="sub">${Math.max(0,f.hp)}/${f.mx}</span></div>`).join('')}</div>
-  <div class="sub">我方${allyTarget?(MEDICINE[B.pend]?'（点击选择用药目标）':'（点击选择治疗目标）'):''}</div><div class="team">${T.map((x,i)=>`<div class="fc ${x.hp<=0?'dead':''} ${cur===x?'cur':''} ${allyTarget&&x.hp>0?'ally-target':''}" ${allyTarget&&x.hp>0?`data-a="ally" data-v="${i}"`:''}><b>${emo(x.p)}</b>${x.p.n} Lv${x.p.lv}${ELC[x.p.el]}<div class="hb"><div class="hf" style="width:${pct(x)}%"></div></div><span class="sub">${Math.max(0,x.hp)}/${x.mx}</span><div class="hb mp"><div class="hf m" style="width:${x.mp/x.mm*100}%"></div></div><span class="sub">魔法 ${x.mp}/${x.mm}</span>${x.guardUntil>B.r?'<br><span class="tag">护佑</span>':''}${x.hp>0&&x.tauntUntil>B.r?'<br><span class="tag">嘲讽中 · 单体集火</span>':''}${x.stun?'<br><span class="tag">眩晕</span>':''}</div>`).join('')}</div>
+  return `<div class="card">${battlePlaybackView()}<div class="sub">敌方${enemyTarget?'（点击选择目标）':''}</div><div class="team">${F.map((f,i)=>`<div class="fc ${battleUnitClass(f)} ${f.hp<=0?'dead':''} ${enemyTarget&&f.hp>0?'tgt':''}" ${enemyTarget&&f.hp>0?`data-a="tgt" data-v="${i}"`:''}>${battleNumber(f)}<b>${f.e}</b>${f.n} Lv${f.lv}${ELC[f.el]}<br><span class="sub">${(f.sk||[]).join(' ')}</span>${f.boss&&f.hp>0?`<span class="intent">${intent(f)}</span>`:''}${f.stun&&!f.boss?'<span class="tag">定身</span>':''}<div class="hb"><div class="hf e" style="width:${pct(f)}%"></div></div><span class="sub">${Math.max(0,f.hp)}/${f.mx}</span></div>`).join('')}</div>
+  <div class="sub">我方${allyTarget?(MEDICINE[B.pend]?'（点击选择用药目标）':'（点击选择治疗目标）'):''}</div><div class="team">${T.map((x,i)=>`<div class="fc ${battleUnitClass(x)} ${x.hp<=0?'dead':''} ${cur===x&&!B.resolving?'cur':''} ${allyTarget&&x.hp>0?'ally-target':''}" ${allyTarget&&x.hp>0?`data-a="ally" data-v="${i}"`:''}>${battleNumber(x)}<b>${emo(x.p)}</b>${x.p.n} Lv${x.p.lv}${ELC[x.p.el]}<div class="hb"><div class="hf" style="width:${pct(x)}%"></div></div><span class="sub">${Math.max(0,x.hp)}/${x.mx}</span><div class="hb mp"><div class="hf m" style="width:${x.mp/x.mm*100}%"></div></div><span class="sub">魔法 ${x.mp}/${x.mm}</span>${(x.guardUntil>B.r||B.resolving&&x.guardUntil===B.r&&B.r>0)?'<br><span class="tag">护佑</span>':''}${x.hp>0&&(x.tauntUntil>B.r||B.resolving&&x.tauntUntil===B.r&&B.r>0)?'<br><span class="tag">嘲讽中 · 单体集火</span>':''}${x.stun?'<br><span class="tag">眩晕</span>':''}</div>`).join('')}</div>
   ${B.run&&F.some(f=>f.hp>0&&f.boss&&f.phase=='burst'&&!f.stun)?'<div class="intent">⚠️ Boss 已蓄力！本回合可防御减伤50%，或用定身打断、集火击倒。</div>':''}
   <div id="log">${LOGL.slice(-12).join('<br>')}</div>${lootOdds(F)}
   <details class="sub battle-help"><summary>战斗规则与技能</summary><div>每场开始气血与魔法补满。普攻不耗蓝并回复4魔法；防御减伤50%并回复8魔法。治疗与红蓝药只能选择存活队友。红药固定恢复${RECOVERY.red}点气血，蓝药固定恢复${RECOVERY.blue}点魔法，治疗技能恢复目标最大气血的30%（消耗10魔法），用药占用一次行动，目标已满时不消耗。禁药周两种药都不能使用。</div><div>战斗经验为固定总量，胜利后由本场实际参战宠物平分，倒下的宠物也有份。除不尽的余数按上阵顺序各补1点。</div><div>首领循环：普攻（部分首领低血时治疗）→ 蓄力 → 群攻。定身可打断已蓄力的群攻；速度快的控制宠更容易抢先出手。自动战斗会根据血量、魔法和首领行动选择技能。</div>${[...new Set(T.flatMap(x=>x.p.sk))].map(k=>`<div><b>${k}</b>：${SK[k]||''}</div>`).join('')}</details></div>`;
@@ -626,7 +637,7 @@ function stopAutoRun(){if(AUTO_TIMER){clearInterval(AUTO_TIMER);AUTO_TIMER=null}
 function scheduleFarm(){
   if(FARM_TIMER)clearTimeout(FARM_TIMER);
   if(!S.farmOn||S.mode!='main'||B.run||document.hidden)return;
-  FARM_TIMER=setTimeout(()=>{FARM_TIMER=null;if(!S.farmOn||S.mode!='main'||B.run||document.hidden)return;bstart();if(B.run){autoRun();render()}else{S.farmOn=false;save();render()}},700);
+  FARM_TIMER=setTimeout(()=>{FARM_TIMER=null;if(!S.farmOn||S.mode!='main'||B.run||document.hidden)return;bstart();if(B.run){autoRun();render()}else{S.farmOn=false;save();render()}},Math.max(700,2200/S.battleSpeed));
 }
 const availableBattlePets=()=>S.team.map(get).filter(p=>p&&!p.job&&!isExploring(p.id));
 function canStartBattle(){
@@ -679,11 +690,12 @@ function autoRun(){
   if(AUTO_TIMER)clearInterval(AUTO_TIMER);if(!B.run||document.hidden)return;B.auto=1;B.pend=null;
   AUTO_TIMER=setInterval(()=>{
     if(!B.run||!B.auto||document.hidden){stopAutoRun();return}
+    if(B.resolving||Date.now()<(B.nextRoundAt||0))return;
     B.T.forEach(t=>{if(t.hp>0&&!t.cmd)autoPick(t)});resolve();
   },500);
 }
 function bpick(c){
-  if(!B.run||B.auto)return;
+  if(!B.run||B.auto||B.resolving)return;
   const t=B.T[B.pi];if(!t||t.hp<=0)return;
   if(c=='x'){B.pend=null;render();return}
   if(!['a','d',...Object.keys(MEDICINE),...Object.keys(CAST)].includes(c))return;
@@ -696,13 +708,14 @@ function bpick(c){
   commit(c,0);
 }
 function btgt(i,side='enemy'){
-  if(!B.run||B.auto||!B.pend||targetSide(B.pend)!=side)return;
+  if(!B.run||B.auto||B.resolving||!B.pend||targetSide(B.pend)!=side)return;
   const target=(side=='ally'?B.T:B.F)[i];if(!target||target.hp<=0)return;
   if(MEDICINE[B.pend]&&!medicineNeeded(B.pend,target))return toast(B.pend=='h'?'该宠物气血已满':'该宠物魔法已满');
   if(MEDICINE[B.pend]&&!medicineLeft(B.pend))return toast('道具已被其他指令预留');
   commit(B.pend,+i);
 }
 function commit(c,tg){
+  if(!B.run||B.resolving)return;
   const t=B.T[B.pi];t.cmd=c;t.tg=tg;B.pend=null;
   const n=nxt(B.pi+1);if(n<0)resolve();else{B.pi=n;render()}
 }
@@ -797,6 +810,8 @@ function fAct(f){
 }
 function endCheck(){if(!alive(B.F).length){bend(1);return 1}if(!alive(B.T).length){bend(0);return 1}return 0}
 function resolve(){
+  if(!B.run||B.resolving||document.hidden)return;
+  B.resolving=true;B.pend=null;
   LOGL.push('— 第'+(++B.r)+'回合 —');
   B.T.forEach(t=>{
     t.df=t.cmd=='d'&&!t.stun;
@@ -806,15 +821,47 @@ function resolve(){
   B.T.forEach(t=>{if(t.hp>0)acts.push({t,spd:t.a.spd+R(0,3)+(t.p.ab==0?100:0)})});
   B.F.forEach(f=>{if(f.hp>0)acts.push({f,spd:f.spd+R(0,3)})});
   acts.sort((x,y)=>y.spd-x.spd);
-  for(const x of acts){if(!alive(B.F).length||!alive(B.T).length)break;x.t?pAct(x.t):fAct(x.f)}
+  B.playback={acts,index:0,phase:'prepare'};playBattleStep();
+}
+function queueBattleStep(ms){
+  if(BATTLE_TIMER)clearTimeout(BATTLE_TIMER);BATTLE_TIMER=null;
+  if(document.hidden||!B.run||!B.resolving)return;
+  const battle=B;BATTLE_TIMER=setTimeout(()=>{BATTLE_TIMER=null;if(B===battle)playBattleStep()},ms/S.battleSpeed);
+}
+function actionLabel(x){
+  const u=x.t||x.f;if(u.stun)return '无法行动';
+  if(x.t)return CAST[u.cmd]?.skill||(MEDICINE[u.cmd]?ITEMS[MEDICINE[u.cmd]].n:u.cmd=='d'?'防御':'普通攻击');
+  return u.boss&&u.phase=='burst'?'蓄力群攻':u.boss&&u.phase=='charge'?'准备蓄力':'敌方行动';
+}
+function playBattleStep(){
+  if(!B.run||!B.resolving||document.hidden)return;
+  const playback=B.playback;
+  if(playback.phase=='complete'){playback.index++;playback.phase='prepare'}
+  if(playback.phase=='prepare'){
+    while(playback.index<playback.acts.length&&(playback.acts[playback.index].t||playback.acts[playback.index].f).hp<=0)playback.index++;
+    if(playback.index>=playback.acts.length||!alive(B.F).length||!alive(B.T).length){finishBattleRound();return}
+    const action=playback.acts[playback.index],unit=action.t||action.f;
+    B.fx={actor:unit,title:(action.t?unit.p.n:unit.n)+' · '+actionLabel(action),lines:['准备出手…'],changes:[],special:actionLabel(action)=='蓄力群攻'};
+    playback.phase='execute';if(S.tab=='fight')render();queueBattleStep(350);return;
+  }
+  const action=playback.acts[playback.index],units=[...B.T,...B.F],before=units.map(unit=>unit.hp),start=LOGL.length;
+  action.t?pAct(action.t):fAct(action.f);
+  const lines=LOGL.slice(start),changes=units.map((unit,i)=>({unit,delta:unit.hp-before[i]})).filter(x=>x.delta);
+  B.fx={...B.fx,lines,changes,special:lines.some(line=>/必杀|连击|神佑|反震|群攻|蓄力/.test(line))};
+  playback.phase='complete';if(S.tab=='fight')render();queueBattleStep(B.fx.special?1200:900);
+}
+function finishBattleRound(){
+  B.resolving=false;B.playback=null;B.fx=null;
   B.T.forEach(t=>t.cmd=null);
   if(endCheck())return;
   if(B.r>=30){LOGL.push('达到30回合，队伍撤退');return bend(0)}
-  B.pi=nxt(0);B.pend=null;render();
+  B.pi=nxt(0);B.pend=null;B.nextRoundAt=Date.now()+650/S.battleSpeed;if(S.tab=='fight')render();
 }
 
 function bend(win){
   if(!B.run||B.rewarded)return;B.rewarded=true;
+  if(BATTLE_TIMER)clearTimeout(BATTLE_TIMER);BATTLE_TIMER=null;B.resolving=false;B.playback=null;
+  B.fx={title:win?'🎉 战斗胜利':'队伍撤退',lines:[win?'本场奖励已结算':'调整阵容后再来挑战'],changes:[],special:true};
   const loot=win?lootContext():null;
   const wasFarm=S.farmOn&&S.mode=='main';B.run=0;stopAutoRun();if(win)qp('win');
   if(win&&B.tw)twin();else if(win&&B.hunt)hwin();else if(win){const e=B.F[1],c=Math.round(e.lv*12*(e.b?3:1)*(1+.5*S.ng)),ex=battleExpPool(B.F,'main');S.coins+=c;const xp=rewardBattleExp(ex);LOGL.push('🎉 胜利! +'+c+'🪙，'+xp);if(e.b){S.stone++;LOGL.push('获得 进化石 x1');const ri=Math.floor((S.stage-1)/5)%6;if(S.stage<=30&&!S.badges.includes(ri)){S.badges.push(ri);S.gems+=15;LOGL.push('🏅 获得'+REG[ri].n+'徽章，💎+15，全队属性+2%')}}if(S.stage==S.maxStage)S.maxStage++}
@@ -823,7 +870,6 @@ function bend(win){
   if(wasFarm){
     if(win&&!S.farmHold){if(S.stage<30&&S.stage<S.maxStage)S.stage++;else S.farmHold=true}
     if(!win){if(S.stage>1){S.stage--;S.farmHold=true;LOGL.push('↩️ 连续自动退回第'+S.stage+'关挂机')}else{S.farmOn=false;S.farmHold=false;LOGL.push('连续自动已停止：第1关未通过')}}
-    B.F=null;B.T=null;
   }
   window.hap&&hap();save();render();if(S.farmOn)scheduleFarm();
 }
@@ -871,10 +917,11 @@ function claim(){
   S.off=null;toast('离线收益已领取');
 }
 function act(a,v){
-  if(B.run&&!['tab','cmd','auto','farm','tgt','ally','dq','ac','autopot','bagmed','aptinfo','offad','potrule','bagselect','bagfilter','packresultclose','shopcurrency','fuseresultopen','fuseresultclose'].includes(a))return;
+  if(B.run&&!['tab','battlespeed','cmd','auto','farm','tgt','ally','dq','ac','autopot','bagmed','aptinfo','offad','potrule','bagselect','bagfilter','packresultclose','shopcurrency','fuseresultopen','fuseresultclose'].includes(a))return;
   const p=get(S.sel);
   if(a!=='washapply')WASH_CONFIRM=null;
   if(a=='tab'){S.tab=v;REL=0}
+  else if(a=='battlespeed'){const speed=Number(v);if(![1,2,4].includes(speed))return;S.battleSpeed=speed}
   else if(a=='rename'&&p){
     const form=$('pet-rename-form');if(!form||Number(form.dataset.petId)!==p.id)return;
     const name=$('pet-name').value.normalize('NFC').trim();
@@ -1039,7 +1086,7 @@ if(!Array.isArray(S.team))S.team=get(S.active)?[S.active]:[];S.team=[...new Set(
 dqRoll();S.pets.forEach(dx);if(!get(S.sel))S.sel=S.pets[0].id;if(S.mode!='main')S.farmOn=false;
 render();if(S.farmOn)scheduleFarm();
 if(RETIRED_LIFE_REFUND){save();toast('寿命系统已移除，剩余长寿丹已退还 '+RETIRED_LIFE_REFUND+' 钻石');RETIRED_LIFE_REFUND=0}
-document.addEventListener('visibilitychange',()=>{if(document.hidden){if(FARM_TIMER)clearTimeout(FARM_TIMER);stopAutoRun();S.last=Date.now();save()}else{checkOff();if(S.farmOn){if(B.run)autoRun();else scheduleFarm()}render()}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){if(BATTLE_TIMER)clearTimeout(BATTLE_TIMER);BATTLE_TIMER=null;if(FARM_TIMER)clearTimeout(FARM_TIMER);stopAutoRun();S.last=Date.now();save()}else{checkOff();if(B.run&&B.resolving)queueBattleStep(200);if(S.farmOn){if(B.run)autoRun();else scheduleFarm()}render()}});
 setInterval(()=>{if(!document.hidden&&!B.run){S.last=Date.now();save();if(S.tab=='idle')render()}},5000);
 setInterval(()=>{if(document.hidden)return;const was=EXP_BOOST_ACTIVE;updateExpBoostStatus();if(was!==EXP_BOOST_ACTIVE)render()},1000);
 </script>
