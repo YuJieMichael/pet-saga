@@ -76,9 +76,9 @@ const fighter=p=>{const a=stats(p),mm=maxMana(p);return{p,a,hp:a.hp,mx:a.hp,mp:m
 const intent=f=>!f.boss?'':f.stun?'被定身：下次行动跳过':f.phase=='burst'?'⚠️ 下回合：蓄力群攻':f.phase=='charge'?'下回合：蓄力（不攻击）':'下回合：'+((f.sk||[]).includes('治疗')&&f.hp<f.mx*.5?'自我治疗':'普通攻击');
 const MEDICINE={h:'red',u:'blue'},RECOVERY={red:100,blue:30,heal:.3};
 const targetSide=c=>c=='a'?'enemy':MEDICINE[c]?'ally':CAST[c]?.target;
-const ITEMS={red:{n:'红药',e:'🔴',price:10,currency:'coins',desc:`战斗中固定恢复一名存活队友${RECOVERY.red}点气血，不超过上限，占用一次行动。`},blue:{n:'蓝药',e:'🔵',price:15,currency:'coins',desc:`战斗中固定恢复一名存活队友${RECOVERY.blue}点魔法，不超过上限，占用一次行动。`},exp:{n:'经验丹',e:'✨',price:100,currency:'coins',desc:'使用后全队战斗经验+100%，持续1小时；重复使用延长时间。'},life:{n:'长寿丹',e:'🌿',price:20,currency:'gems',desc:'为选中的宠物增加100寿命。'}};
+const ITEMS={red:{n:'红药',e:'🔴',price:10,currency:'coins',desc:`战斗中固定恢复一名存活队友${RECOVERY.red}点气血，不超过上限，占用一次行动。`},blue:{n:'蓝药',e:'🔵',price:15,currency:'coins',desc:`战斗中固定恢复一名存活队友${RECOVERY.blue}点魔法，不超过上限，占用一次行动。`},exp:{n:'经验丹',e:'✨',price:100,currency:'coins',desc:'使用后全队战斗经验+100%，持续1小时；重复使用延长时间。'}};
 const POTION_PARTS={redPart:{n:'红药碎片',e:'🟥',target:'red',need:5,rate:[.45,.75]},bluePart:{n:'蓝药碎片',e:'🟦',target:'blue',need:5,rate:[.35,.65]}};
-const LOOT=[{id:'red',n:'红药',e:'🔴',rate:[.25,.5],qty:[1,2]},{id:'blue',n:'蓝药',e:'🔵',rate:[.2,.4],qty:[1,2]},{id:'exp',n:'经验丹',e:'✨',rate:[.01,.04],qty:[1,1]},{id:'life',n:'长寿丹',e:'🌿',rate:[.003,.01],qty:[1,1]},{id:'shard',n:'进化石碎片',e:'🧩',rate:[.05,.2],qty:[1,2]},{id:'stone',n:'进化石',e:'🪨',rate:[.002,.03],qty:[1,1]},...Object.entries(POTION_PARTS).map(([id,p])=>({id,n:p.n,e:p.e,rate:p.rate,qty:[1,3]}))];
+const LOOT=[{id:'red',n:'红药',e:'🔴',rate:[.25,.5],qty:[1,2]},{id:'blue',n:'蓝药',e:'🔵',rate:[.2,.4],qty:[1,2]},{id:'exp',n:'经验丹',e:'✨',rate:[.01,.04],qty:[1,1]},{id:'shard',n:'进化石碎片',e:'🧩',rate:[.05,.2],qty:[1,2]},{id:'stone',n:'进化石',e:'🪨',rate:[.002,.03],qty:[1,1]},...Object.entries(POTION_PARTS).map(([id,p])=>({id,n:p.n,e:p.e,rate:p.rate,qty:[1,3]}))];
 const BADSK=ELS.map(e=>'弱'+e),OLD_BADSK=['虚弱','迟钝','薄甲'],WEAK_SP=[0,1,5,8],weakFor=el=>'弱'+ELS[BEAT.indexOf(el)],SKN=Object.keys(SK).filter(k=>!BADSK.includes(k)),AN=['攻击','防御','体力','法力','速度'],TN=['体质','魔力','力量','耐力','敏捷'],QN=['野生','宝宝','变异'];
 const BOOK_RATE=[.02,.12],BOSS_BOOKS=['神佑','地狱烈火'];
 const BOOK_GRADES={low:{name:'低级',weight:3},high:{name:'高级',weight:1}};
@@ -101,7 +101,7 @@ const POINT_DRAFT=new Map();
 const pointDraft=p=>POINT_DRAFT.get(p.id)||[0,0,0,0,0];
 const APT_BANDS=[[.82,.95],[.96,1.06],[1.16,1.28]],EV_AP=[1.12,1.1];
 let APT_INFO=null;
-let OFF_AD=false;
+let OFF_AD=false,RETIRED_LIFE_REFUND=0;
 let BAG_ITEM=null,BAG_FILTER='all',PACK_RESULT=null,SHOP_CURRENCY='coins';
 let ROSTER_DRAG=null,ROSTER_NO_CLICK_UNTIL=0;
 let FUSION_RESULT_OPEN=false,WASH_CONFIRM=null;
@@ -110,7 +110,7 @@ Object.assign(ITEMS,WASH_ITEMS);
 const BAG_CATEGORIES=[['all','全部'],['medicine','补给'],['growth','养成'],['material','材料'],['book','技能书'],['pack','礼包']];
 const PACKS={
   supplies:{n:'补给小礼包',e:'🎁',currency:'coins',price:50,rate:[.03,.08],desc:'固定获得红药×3、蓝药×2。金币商店购买，或战斗掉落。',items:{red:3,blue:2}},
-  growth:{n:'成长小礼包',e:'🎀',currency:'gems',price:25,rate:[0,.02],desc:'固定获得经验丹×2、长寿丹×1。钻石商店购买，或Boss掉落。',items:{exp:2,life:1}},
+  growth:{n:'成长小礼包',e:'🎀',currency:'gems',price:25,rate:[0,.02],desc:'固定获得经验丹×3。钻石商店购买，或Boss掉落。',items:{exp:3}},
   books:{n:'技能书小礼包',e:'📦',rate:[0,.02],desc:'随机获得1本低级技能书，各本概率相同。仅Boss掉落，不能购买。'}
 };
 const SKINS={green:{n:'整成绿的',price:30,desc:'我今天就得花钱就得把这玩意整成绿的'}};
@@ -121,7 +121,7 @@ function mk(sp,lv,q,z,id=S.nid++){
   const pool=[...new Set([...SPEC_SK[sp],...(z?z.sk:SKN)])];if(q>0)sk.push(SPEC_SK[sp][0]);while(sk.length<Math.min(n,pool.length)){const k=pick(pool);if(!sk.includes(k))sk.push(k)}
   const el=z?pick(z.el):RI(0,4);
   if(WEAK_SP.includes(sp)&&Math.random()<[.4,.2,.05][q])sk.push(weakFor(el));
-  return{id,sp,n:(q==2?'变异':'')+SP[sp].n,lv,exp:0,ap:SP[sp].b.map(v=>Math.round(v*R(lo,hi))),g:+R(gl,gh).toFixed(3),at:[10,10,10,10,10],fp:5*lv,sk,loy:100,q,el,xl:[0,0,0],nd:[],life:100,ev:0,nat:RI(0,5),ab:RI(0,5)};
+  return{id,sp,n:(q==2?'变异':'')+SP[sp].n,lv,exp:0,ap:SP[sp].b.map(v=>Math.round(v*R(lo,hi))),g:+R(gl,gh).toFixed(3),at:[10,10,10,10,10],fp:5*lv,sk,loy:100,q,el,xl:[0,0,0],nd:[],ev:0,nat:RI(0,5),ab:RI(0,5)};
 }
 const get=id=>S.pets.find(p=>p.id===id);
 const slots=p=>(p.q==2?5:p.q?4:3)+(p.ev||0);
@@ -309,7 +309,10 @@ const normalizePotionThreshold=v=>v==null||!Number.isFinite(Number(v))?20:Math.m
 function initBag(){
   const expiry=Number(S.expBoostUntil);S.expBoostUntil=Number.isFinite(expiry)?Math.max(0,expiry):0;
   const valid=S.bag&&typeof S.bag=='object'&&!Array.isArray(S.bag);
-  if(!valid)S.bag={red:S.pot===undefined?3:S.pot,blue:3,exp:0,life:0};
+  if(!valid)S.bag={red:S.pot===undefined?3:S.pot,blue:3,exp:0};
+  const retiredLife=Number(S.bag.life);
+  if(Number.isFinite(retiredLife)&&retiredLife>0){RETIRED_LIFE_REFUND=Math.floor(retiredLife)*20;S.gems+=RETIRED_LIFE_REFUND}
+  delete S.bag.life;
   for(const key of [...Object.keys(ITEMS),...Object.keys(POTION_PARTS)]){const n=Number(S.bag[key]);S.bag[key]=Number.isFinite(n)?Math.max(0,Math.floor(n)):0}
   const books=S.bag.books&&typeof S.bag.books=='object'&&!Array.isArray(S.bag.books)?S.bag.books:{};
   S.bag.books=Object.fromEntries(SKN.map(k=>{const n=Number(books[k]);return[k,Number.isFinite(n)?Math.max(0,Math.floor(n)):0]}));
@@ -317,7 +320,7 @@ function initBag(){
   S.bag.packs=Object.fromEntries(Object.keys(PACKS).map(k=>{const n=Number(packs[k]);return[k,Number.isFinite(n)?Math.max(0,Math.floor(n)):0]}));
   delete S.pot;S.autoPotion=S.autoPotion===true;
   const rules=S.potionRules||{};S.potionRules={red:normalizePotionThreshold(rules.red),blue:normalizePotionThreshold(rules.blue)};
-  S.lootLog=Array.isArray(S.lootLog)?S.lootLog.slice(0,6):[];
+  S.lootLog=Array.isArray(S.lootLog)?S.lootLog.slice(0,6).map(entry=>({...entry,items:entry.items.filter(item=>item.id!=='life')})).filter(entry=>entry.items.length||entry.crafted):[];
 }
 const itemCount=id=>S.bag?.[id]||0;
 const bookCount=skill=>S.bag.books?.[skill]||0;
@@ -392,12 +395,11 @@ function buyItem(id,n){
   const cost=item.price*n;if(S[item.currency]<cost)return toast(item.currency=='coins'?'金币不足':'钻石不足');
   S[item.currency]-=cost;addItem(id,n);toast(item.n+' ×'+n+' 已放入背包');
 }
-function useGrowthItem(id,p){
-  if(B.run||!['exp','life'].includes(id)||id=='life'&&!p)return;
+function useGrowthItem(id){
+  if(B.run||id!=='exp')return;
   if(!itemCount(id))return toast('背包里没有'+ITEMS[id].n);
   S.bag[id]--;
-  if(id=='exp'){S.expBoostUntil=Math.max(Date.now(),S.expBoostUntil||0)+3600000;toast('战斗经验 +100%，有效时间增加1小时')}
-  else{p.life+=100;toast(p.n+'寿命增加100')}
+  S.expBoostUntil=Math.max(Date.now(),S.expBoostUntil||0)+3600000;toast('战斗经验 +100%，有效时间增加1小时');
 }
 const medicineLeft=c=>Math.max(0,itemCount(MEDICINE[c])-(B.run?B.T.filter(t=>t.cmd==c&&t.hp>0).length:0));
 const medicineNeeded=(c,t)=>!!t&&t.hp>0&&(c=='h'?t.hp<t.mx:t.mp<t.mm);
@@ -473,8 +475,8 @@ function syncFormation(){
   S.team=S.formation.filter(id=>id!==null);S.active=S.team[0]||0;
 }
 function rosterPet(p){
-  const blocked=B.run||p.job||isExploring(p.id)||p.life<=0;
-  return`<div class="roster-pet" ${blocked?'':`data-drag-pet="${p.id}"`}>${card(p)}<button type="button" data-drag-handle aria-label="拖动${p.n}调整上阵" ${blocked?'disabled':''}>${p.job?'派遣中':isExploring(p.id)?'探险中':p.life<=0?'寿命已尽':B.run?'战斗中':'⠿ 拖动'}</button></div>`;
+  const blocked=B.run||p.job||isExploring(p.id);
+  return`<div class="roster-pet" ${blocked?'':`data-drag-pet="${p.id}"`}>${card(p)}<button type="button" data-drag-handle aria-label="拖动${p.n}调整上阵" ${blocked?'disabled':''}>${p.job?'派遣中':isExploring(p.id)?'探险中':B.run?'战斗中':'⠿ 拖动'}</button></div>`;
 }
 function formationView(){
   const selected=get(S.sel);
@@ -487,7 +489,7 @@ function finishFormation(message){
 function placeTeamPet(id,slot){
   if(B.run||!Number.isInteger(slot)||slot<0||slot>2)return;
   const pet=get(id);if(!pet)return;
-  if(pet.job)return toast('派遣中，请先收回');if(isExploring(id))return toast('探险中，请先召回');if(pet.life<=0)return toast('寿命已尽');
+  if(pet.job)return toast('派遣中，请先收回');if(isExploring(id))return toast('探险中，请先召回');
   syncFormation();const from=S.formation.indexOf(id),old=S.formation[slot];if(from===slot)return;
   S.formation[slot]=id;if(from>=0)S.formation[from]=old;
   S.sel=id;finishFormation(from>=0?'已调整上阵位置':old?'已替换上阵宠物':'已上阵');
@@ -542,7 +544,7 @@ function detail(p){
   const draft=pointDraft(p),pending=draft.reduce((a,b)=>a+b,0),left=p.fp-pending;
   const s=stats({...p,at:p.at.map((v,i)=>v+draft[i])}),sl=slots(p);
   return`<div class="card"><h3>${emo(p)} ${p.n} · Lv${p.lv} <span class="tag ${p.q==2?'g':''}">${QN[p.q]}</span></h3>
-  <div class="sub">${isGatherer(p)?`⛏ 采集型：探险采矿金币+${p.q==2?40:25}%<br>`:''}五行 ${ELC[p.el]}${ELS[p.el]} · 经验 ${p.exp}/${Math.round(p.lv*p.lv*1.65)} · 成长率 ${p.g} · 忠诚 ${p.loy} · 寿命 ${p.life}<br>性格 ${NAT[p.nat][0]}（${NAT[p.nat][3]}）· 特性 ${AB[p.ab][0]}：${AB[p.ab][1]}${p.loy<60?' ⚠️属性-15%':''}</div>
+  <div class="sub">${isGatherer(p)?`⛏ 采集型：探险采矿金币+${p.q==2?40:25}%<br>`:''}五行 ${ELC[p.el]}${ELS[p.el]} · 经验 ${p.exp}/${Math.round(p.lv*p.lv*1.65)} · 成长率 ${p.g} · 忠诚 ${p.loy}<br>性格 ${NAT[p.nat][0]}（${NAT[p.nat][3]}）· 特性 ${AB[p.ab][0]}：${AB[p.ab][1]}${p.loy<60?' ⚠️属性-15%':''}</div>
   ${aptitudeView(p)}
   <div class="grid2" style="margin-bottom:8px"><span>气血 <b>${s.hp}</b></span><span>攻击 <b>${s.atk}</b></span><span>防御 <b>${s.def}</b></span><span>法攻 <b>${s.mag}</b></span><span>速度 <b>${s.spd}</b></span><span>可用点数 <b>${left}</b></span></div>
   <div class="sub" style="margin-bottom:6px">${pending?'属性预览：已预分配 '+pending+' 点，确认后生效。':'先分配点数，再点击确认；“全部”将剩余点数加到该属性。'}</div>
@@ -620,10 +622,10 @@ function scheduleFarm(){
   if(!S.farmOn||S.mode!='main'||B.run||document.hidden)return;
   FARM_TIMER=setTimeout(()=>{FARM_TIMER=null;if(!S.farmOn||S.mode!='main'||B.run||document.hidden)return;bstart();if(B.run){autoRun();render()}else{S.farmOn=false;save();render()}},700);
 }
-const availableBattlePets=()=>S.team.map(get).filter(p=>p&&p.life>0&&!p.job&&!isExploring(p.id));
+const availableBattlePets=()=>S.team.map(get).filter(p=>p&&!p.job&&!isExploring(p.id));
 function canStartBattle(){
   if(!S.team.length){toast('请至少上阵一只宠物再开始战斗');return false}
-  if(!availableBattlePets().length){toast('上阵宠物无法参战，请换上寿命大于0且空闲的宠物');return false}
+  if(!availableBattlePets().length){toast('上阵宠物无法参战，请换上未派遣、未探险的宠物');return false}
   return true;
 }
 function bstart(){
@@ -803,7 +805,7 @@ function resolve(){
 function bend(win){
   if(!B.run||B.rewarded)return;B.rewarded=true;
   const loot=win?lootContext():null;
-  const wasFarm=S.farmOn&&S.mode=='main';B.run=0;stopAutoRun();if(!wasFarm)B.T.forEach(t=>t.p.life--);if(win)qp('win');
+  const wasFarm=S.farmOn&&S.mode=='main';B.run=0;stopAutoRun();if(win)qp('win');
   if(win&&B.tw)twin();else if(win&&B.hunt)hwin();else if(win){const e=B.F[1],c=Math.round(e.lv*12*(e.b?3:1)*(1+.5*S.ng)),ex=battleExpPool(B.F,'main');S.coins+=c;const xp=rewardBattleExp(ex);LOGL.push('🎉 胜利! +'+c+'🪙，'+xp);if(e.b){S.stone++;LOGL.push('获得 进化石 x1');const ri=Math.floor((S.stage-1)/5)%6;if(S.stage<=30&&!S.badges.includes(ri)){S.badges.push(ri);S.gems+=15;LOGL.push('🏅 获得'+REG[ri].n+'徽章，💎+15，全队属性+2%')}}if(S.stage==S.maxStage)S.maxStage++}
   else{B.T.forEach(t=>t.p.loy=Math.max(0,t.p.loy-10));LOGL.push('💀 全员倒下，忠诚度 -10')}
   if(win)grantBattleLoot(loot);
@@ -899,7 +901,7 @@ function act(a,v){
   else if(a=='potrule'){const [id,raw]=String(v).split(','),delta=Number(raw);if(!['red','blue'].includes(id)||![-5,5].includes(delta))return;S.potionRules[id]=Math.min(95,Math.max(0,S.potionRules[id]+delta))}
   else if(a=='offad'){watchOfflineAd();return}
   else if(a=='buyitem'){const [id,n]=String(v).split(',');buyItem(id,Number(n))}
-  else if(a=='useitem'){useGrowthItem(v,p)}
+  else if(a=='useitem'){useGrowthItem(v)}
   else if(a=='bagmed'){if(!B.run)return toast('红蓝药在战斗中使用');if(B.auto)return toast('请先停止自动战斗再选择用药');if(!MEDICINE[v])return;S.tab='fight';bpick(v);render();return}
   else if(a=='act'&&p){if(S.team.includes(p.id))removeTeamPet(p.id);else{syncFormation();const slot=S.formation.indexOf(null);if(slot<0)return toast('最多上阵3只');placeTeamPet(p.id,slot)}return}
   else if(a=='pt'&&p){
@@ -1007,7 +1009,7 @@ function act(a,v){
 document.addEventListener('click',e=>{if(Date.now()<ROSTER_NO_CLICK_UNTIL){e.preventDefault();return}const b=e.target.closest('[data-a]');if(b)act(b.dataset.a,b.dataset.v)});
 load();initBag();initSkins();S.xps=Array.isArray(S.xps)?S.xps:[null,null,null];while(S.xps.length<3)S.xps.push(null);if(S.xp&&!S.xps.some(Boolean))S.xps[0]=S.xp;S.xlogs=Array.isArray(S.xlogs)?S.xlogs:[[],[],[]];while(S.xlogs.length<3)S.xlogs.push([]);if(S.xlog?.length&&!S.xlogs[0]?.length)S.xlogs[0]=S.xlog;S.xsel??={z:0,d:0,ids:[]};S.xsel.car??=0;delete S.xp;delete S.xlog;
 S.pets.forEach(p=>{
-  p.el??=RI(0,4);p.xl??=[0,0,0];p.nd??=[];p.life??=100;p.job??=0;p.ev??=0;p.nat??=RI(0,5);p.ab??=RI(0,5);p.sk??=[];
+  p.el??=RI(0,4);p.xl??=[0,0,0];p.nd??=[];delete p.life;p.job??=0;p.ev??=0;p.nat??=RI(0,5);p.ab??=RI(0,5);p.sk??=[];
   const hadLegacy=p.sk.some(k=>OLD_BADSK.includes(k));p.sk=p.sk.filter(k=>!OLD_BADSK.includes(k));
   if(WEAK_SP.includes(p.sp)){const weakness=weakFor(p.el);p.sk=p.sk.filter(k=>!BADSK.includes(k)||k===weakness);if(hadLegacy&&!p.sk.includes(weakness)&&p.sk.length<slots(p))p.sk.push(weakness)}
   else p.sk=p.sk.filter(k=>!BADSK.includes(k));
@@ -1016,6 +1018,7 @@ if(!S.pets.length){for(let i=0;i<3;i++)S.pets.push(mk((i*2+RI(0,1))%6,5,i?0:1));
 if(!Array.isArray(S.team))S.team=get(S.active)?[S.active]:[];S.team=[...new Set(S.team)].filter(x=>get(x)).slice(0,3);S.active=S.team[0]||0;
 dqRoll();S.pets.forEach(dx);if(!get(S.sel))S.sel=S.pets[0].id;if(S.mode!='main')S.farmOn=false;
 render();if(S.farmOn)scheduleFarm();
+if(RETIRED_LIFE_REFUND){save();toast('寿命系统已移除，剩余长寿丹已退还 '+RETIRED_LIFE_REFUND+' 钻石');RETIRED_LIFE_REFUND=0}
 document.addEventListener('visibilitychange',()=>{if(document.hidden){if(FARM_TIMER)clearTimeout(FARM_TIMER);stopAutoRun();S.last=Date.now();save()}else{checkOff();if(S.farmOn){if(B.run)autoRun();else scheduleFarm()}render()}});
 setInterval(()=>{if(!document.hidden&&!B.run){S.last=Date.now();save();if(S.tab=='idle')render()}},5000);
 setInterval(()=>{if(document.hidden)return;const was=EXP_BOOST_ACTIVE;updateExpBoostStatus();if(was!==EXP_BOOST_ACTIVE)render()},1000);
