@@ -68,15 +68,15 @@ button.b:disabled{opacity:.5}
 const SP=[{e:'🐲',n:'蛟龙',b:[1500,1100,3800,1500,1200]},{e:'🐢',n:'大海龟',b:[1000,1600,4600,1100,900]},{e:'🦝',n:'狸',b:[1100,1000,3400,2000,1500]},{e:'🐯',n:'老虎',b:[1600,1200,4000,1000,1300]},{e:'🦅',n:'飞燕',b:[1300,900,3300,1300,1700]},{e:'🐸',n:'巨蛙',b:[1200,1400,4800,1200,1000]},{e:'🦌',n:'灵鹿',b:[1300,1400,4600,2200,1700]},{e:'🦁',n:'金狮',b:[1900,1500,4600,1200,1500]},{e:'🐉',n:'烈焰龙',b:[1800,1300,4200,2000,1600]}];
 const ELS=['金','木','水','火','土'],ELC=['🟡','🟢','🔵','🔴','🟤'],BEAT=[1,4,3,0,2],ELM=(x,y)=>BEAT[x]==y?1.3:BEAT[y]==x?.75:1;
 const MAPS=['大唐境外','东海湾','江南野外','女儿村','长寿郊外','花果山'],MON=[['👺','强盗'],['🐗','野猪'],['💀','骷髅怪'],['🦇','蝙蝠'],['🐍','毒蛇']],BOSS=['九头虫','牛魔王','白骨精'];
-const SK={连击:'普攻有40%概率追加一次60%伤害',必杀:'普攻有25%概率造成2倍伤害',吸血:'普通攻击实际伤害的30%回复气血',反震:'受到物理伤害时反弹25%实际伤害，反弹不会再次触发反震',神佑:'每场首次受到致命伤时有30%概率复活，恢复40%气血；不屈优先触发',再生:'每回合开始时恢复5%气血，倒下后不生效',烈火:'8魔法：火系单体法术，基础伤害为法攻×1.8，再计算防御与五行',地狱烈火:'12魔法：火系群体法术，每个敌人的基础伤害为法攻×0.85',治疗:'10魔法：恢复一名存活队友的气血，治疗量为法攻×1.1＋目标气血上限的10%',定身:'10魔法：普通敌人75%、Boss 45%概率失去下一次行动；可打断已蓄力的群攻。被控后短暂免控',护佑:'8魔法：全队本回合及下回合受到的伤害降低25%，重复施放只刷新持续时间',弱金:'受到金系攻击时额外承受20%伤害',弱木:'受到木系攻击时额外承受20%伤害',弱水:'受到水系攻击时额外承受20%伤害',弱火:'受到火系攻击时额外承受20%伤害',弱土:'受到土系攻击时额外承受20%伤害'};
+const SK={连击:'普攻有40%概率追加一次60%伤害',必杀:'普攻有25%概率造成2倍伤害',吸血:'普通攻击实际伤害的30%回复气血',反震:'受到物理伤害时反弹25%实际伤害，反弹不会再次触发反震',神佑:'每场首次受到致命伤时有30%概率复活，恢复40%气血；不屈优先触发',再生:'每回合开始时恢复5%气血，倒下后不生效',烈火:'8魔法：火系单体法术，基础伤害为法攻×1.8，再计算防御与五行',地狱烈火:'12魔法：火系群体法术，每个敌人的基础伤害为法攻×0.85',治疗:'10魔法：恢复一名存活队友最大气血的30%，不超过气血上限',定身:'10魔法：普通敌人75%、Boss 45%概率失去下一次行动；可打断已蓄力的群攻。被控后短暂免控',护佑:'8魔法：全队本回合及下回合受到的伤害降低25%，重复施放只刷新持续时间',弱金:'受到金系攻击时额外承受20%伤害',弱木:'受到木系攻击时额外承受20%伤害',弱水:'受到水系攻击时额外承受20%伤害',弱火:'受到火系攻击时额外承受20%伤害',弱土:'受到土系攻击时额外承受20%伤害'};
 const CAST={m:{skill:'烈火',cost:8,target:'enemy'},g:{skill:'地狱烈火',cost:12,target:'all'},heal:{skill:'治疗',cost:10,target:'ally'},seal:{skill:'定身',cost:10,target:'enemy'},buff:{skill:'护佑',cost:8,target:'team'}};
 const SPEC_SK=[['烈火','地狱烈火'],['护佑','再生'],['定身','烈火'],['连击','必杀'],['定身','连击'],['再生','护佑'],['治疗','神佑'],['必杀','吸血'],['烈火','地狱烈火']];
 const maxMana=p=>Math.round(24+p.lv*.6+p.at[1]*1.5);
 const fighter=p=>{const a=stats(p),mm=maxMana(p);return{p,a,hp:a.hp,mx:a.hp,mp:mm,mm,cmd:null,tg:0,df:0,guardUntil:0}};
 const intent=f=>!f.boss?'':f.stun?'被定身：下次行动跳过':f.phase=='burst'?'⚠️ 下回合：蓄力群攻':f.phase=='charge'?'下回合：蓄力（不攻击）':'下回合：'+((f.sk||[]).includes('治疗')&&f.hp<f.mx*.5?'自我治疗':'普通攻击');
-const MEDICINE={h:'red',u:'blue'};
+const MEDICINE={h:'red',u:'blue'},RECOVERY={red:100,blue:30,heal:.3};
 const targetSide=c=>c=='a'?'enemy':MEDICINE[c]?'ally':CAST[c]?.target;
-const ITEMS={red:{n:'红药',e:'🔴',price:10,currency:'coins',desc:'战斗中恢复一名存活队友40%气血，占用一次行动。'},blue:{n:'蓝药',e:'🔵',price:15,currency:'coins',desc:'战斗中恢复一名存活队友40%魔法，占用一次行动。'},exp:{n:'经验丹',e:'✨',price:100,currency:'coins',desc:'使用后全队战斗经验+100%，持续1小时；重复使用延长时间。'},life:{n:'长寿丹',e:'🌿',price:20,currency:'gems',desc:'为选中的宠物增加100寿命。'}};
+const ITEMS={red:{n:'红药',e:'🔴',price:10,currency:'coins',desc:`战斗中固定恢复一名存活队友${RECOVERY.red}点气血，不超过上限，占用一次行动。`},blue:{n:'蓝药',e:'🔵',price:15,currency:'coins',desc:`战斗中固定恢复一名存活队友${RECOVERY.blue}点魔法，不超过上限，占用一次行动。`},exp:{n:'经验丹',e:'✨',price:100,currency:'coins',desc:'使用后全队战斗经验+100%，持续1小时；重复使用延长时间。'},life:{n:'长寿丹',e:'🌿',price:20,currency:'gems',desc:'为选中的宠物增加100寿命。'}};
 const POTION_PARTS={redPart:{n:'红药碎片',e:'🟥',target:'red',need:5,rate:[.45,.75]},bluePart:{n:'蓝药碎片',e:'🟦',target:'blue',need:5,rate:[.35,.65]}};
 const LOOT=[{id:'red',n:'红药',e:'🔴',rate:[.25,.5],qty:[1,2]},{id:'blue',n:'蓝药',e:'🔵',rate:[.2,.4],qty:[1,2]},{id:'exp',n:'经验丹',e:'✨',rate:[.01,.04],qty:[1,1]},{id:'life',n:'长寿丹',e:'🌿',rate:[.003,.01],qty:[1,1]},{id:'shard',n:'进化石碎片',e:'🧩',rate:[.05,.2],qty:[1,2]},{id:'stone',n:'进化石',e:'🪨',rate:[.002,.03],qty:[1,1]},...Object.entries(POTION_PARTS).map(([id,p])=>({id,n:p.n,e:p.e,rate:p.rate,qty:[1,3]}))];
 const BADSK=ELS.map(e=>'弱'+e),OLD_BADSK=['虚弱','迟钝','薄甲'],WEAK_SP=[0,1,5,8],weakFor=el=>'弱'+ELS[BEAT.indexOf(el)],SKN=Object.keys(SK).filter(k=>!BADSK.includes(k)),AN=['攻击','防御','体力','法力','速度'],TN=['体质','魔力','力量','耐力','敏捷'],QN=['野生','宝宝','变异'];
@@ -379,7 +379,7 @@ function useGrowthItem(id,p){
 const medicineLeft=c=>Math.max(0,itemCount(MEDICINE[c])-(B.run?B.T.filter(t=>t.cmd==c&&t.hp>0).length:0));
 const medicineNeeded=(c,t)=>!!t&&t.hp>0&&(c=='h'?t.hp<t.mx:t.mp<t.mm);
 function potionSettings(){
-  return`<div class="potion-settings"><div class="row" style="justify-content:space-between"><b>自动用药设置</b><button class="b ${S.autoPotion?'':'alt'}" data-a="autopot">${S.autoPotion?'已开启':'已关闭'}</button></div>${['red','blue'].map(id=>{const pct=S.potionRules[id],label=id=='red'?'气血':'魔法';return`<div class="potion-setting"><span>${ITEMS[id].e} ${ITEMS[id].n}：<b>${pct?label+' ≤ '+pct+'%':'停用'}</b></span><div class="row"><button class="b alt" data-a="potrule" data-v="${id},-5" aria-label="降低${ITEMS[id].n}阈值5%" ${pct>0?'':'disabled'}>−5%</button><button class="b alt" data-a="potrule" data-v="${id},5" aria-label="提高${ITEMS[id].n}阈值5%" ${pct<95?'':'disabled'}>+5%</button></div></div>`}).join('')}<div class="sub" style="margin-top:8px;line-height:1.6">${S.autoPotion?'红药优先救急；有主动法术的宠物按魔法百分比用蓝药，遇到Boss蓄力时优先应对。':'当前自动用药关闭，开启后按以上百分比判断。'}<br>范围0–95%，0%停用该药。设置自动保存，下次自动行动生效。喂药占用本回合，不能同时攻击或施法；禁药周不可用药。</div></div>`;
+  return`<div class="potion-settings"><div class="row" style="justify-content:space-between"><b>自动用药设置</b><button class="b ${S.autoPotion?'':'alt'}" data-a="autopot">${S.autoPotion?'已开启':'已关闭'}</button></div>${['red','blue'].map(id=>{const pct=S.potionRules[id],label=id=='red'?'气血':'魔法';return`<div class="potion-setting"><span>${ITEMS[id].e} ${ITEMS[id].n}：<b>${pct?label+' ≤ '+pct+'%':'停用'}</b></span><div class="row"><button class="b alt" data-a="potrule" data-v="${id},-5" aria-label="降低${ITEMS[id].n}阈值5%" ${pct>0?'':'disabled'}>−5%</button><button class="b alt" data-a="potrule" data-v="${id},5" aria-label="提高${ITEMS[id].n}阈值5%" ${pct<95?'':'disabled'}>+5%</button></div></div>`}).join('')}<div class="sub" style="margin-top:8px;line-height:1.6">${S.autoPotion?'低血量优先救急，治疗技能的实际回复不低于红药时优先治疗；有主动法术的宠物按魔法百分比用蓝药。':'当前自动用药关闭，开启后按以上百分比判断。'}<br>范围0–95%，0%停用该药。设置自动保存，下次自动行动生效。喂药占用本回合，不能同时攻击或施法；禁药周不可用药。</div></div>`;
 }
 function inventoryEntries(){
   return[
@@ -536,7 +536,7 @@ function battleCommands(cur){
   return `<div class="sub" style="margin-bottom:6px">${B.auto?'自动决策中':'指令：'+cur.p.n+'（'+(B.pi+1)+'/'+B.T.length+'）'} · 魔法 ${cur.mp}/${cur.mm}${B.pend?' · 请选择'+(targetSide(B.pend)=='ally'?(MEDICINE[B.pend]?'我方用药目标':'我方治疗目标'):'敌方目标'):''}</div><div class="row">
   <button class="b" data-a="cmd" data-v="a" ${locked}>⚔️ 普攻 · 回蓝4</button>
   ${skills.map(([c,s])=>`<button class="b" data-a="cmd" data-v="${c}" title="${SK[s.skill]}" ${B.auto||cur.mp<s.cost?'disabled':''}>${s.skill} · ${s.cost}蓝${cur.mp<s.cost?'（不足）':''}</button>`).join('')}
-  <button class="b alt" data-a="cmd" data-v="d" ${locked}>🛡 防御 · 回蓝8</button>${Object.entries(MEDICINE).map(([c,id])=>`<button class="b alt" data-a="cmd" data-v="${c}" ${B.auto||!medicineLeft(c)||B.tw&&wrule()==1?'disabled':''}>${ITEMS[id].e} ${ITEMS[id].n}×${medicineLeft(c)}</button>`).join('')}
+  <button class="b alt" data-a="cmd" data-v="d" ${locked}>🛡 防御 · 回蓝8</button>${Object.entries(MEDICINE).map(([c,id])=>`<button class="b alt" data-a="cmd" data-v="${c}" ${B.auto||!medicineLeft(c)||B.tw&&wrule()==1?'disabled':''}>${ITEMS[id].e} ${ITEMS[id].n}×${medicineLeft(c)} · +${RECOVERY[id]}${id=='red'?'血':'蓝'}</button>`).join('')}
   ${B.pend?'<button class="b alt" data-a="cmd" data-v="x">取消选目标</button>':''}<button class="b alt" data-a="auto">${B.auto?'停止自动':'自动'}</button></div>`;
 }
 function battleArena(F,T,cur){
@@ -545,7 +545,7 @@ function battleArena(F,T,cur){
   <div class="sub">我方${allyTarget?(MEDICINE[B.pend]?'（点击选择用药目标）':'（点击选择治疗目标）'):''}</div><div class="team">${T.map((x,i)=>`<div class="fc ${x.hp<=0?'dead':''} ${cur===x?'cur':''} ${allyTarget&&x.hp>0?'ally-target':''}" ${allyTarget&&x.hp>0?`data-a="ally" data-v="${i}"`:''}><b>${emo(x.p)}</b>${x.p.n} Lv${x.p.lv}${ELC[x.p.el]}<div class="hb"><div class="hf" style="width:${pct(x)}%"></div></div><span class="sub">${Math.max(0,x.hp)}/${x.mx}</span><div class="hb mp"><div class="hf m" style="width:${x.mp/x.mm*100}%"></div></div><span class="sub">魔法 ${x.mp}/${x.mm}</span>${x.guardUntil>B.r?'<br><span class="tag">护佑</span>':''}${x.stun?'<br><span class="tag">眩晕</span>':''}</div>`).join('')}</div>
   ${B.run&&F.some(f=>f.hp>0&&f.boss&&f.phase=='burst'&&!f.stun)?'<div class="intent">⚠️ Boss 已蓄力！本回合可防御减伤50%，或用定身打断、集火击倒。</div>':''}
   <div id="log">${LOGL.slice(-12).join('<br>')}</div>${lootOdds(F)}
-  <details class="sub battle-help"><summary>战斗规则与技能</summary><div>每场开始气血与魔法补满。普攻不耗蓝并回复4魔法；防御减伤50%并回复8魔法。治疗与红蓝药只能选择存活队友。红药恢复40%气血，蓝药恢复40%魔法，用药占用一次行动，目标已满时不消耗。禁药周两种药都不能使用。</div><div>战斗经验为固定总量，胜利后由本场实际参战宠物平分，倒下的宠物也有份。除不尽的余数按上阵顺序各补1点。</div><div>首领循环：普攻（部分首领低血时治疗）→ 蓄力 → 群攻。定身可打断已蓄力的群攻；速度快的控制宠更容易抢先出手。自动战斗会根据血量、魔法和首领行动选择技能。</div>${[...new Set(T.flatMap(x=>x.p.sk))].map(k=>`<div><b>${k}</b>：${SK[k]||''}</div>`).join('')}</details></div>`;
+  <details class="sub battle-help"><summary>战斗规则与技能</summary><div>每场开始气血与魔法补满。普攻不耗蓝并回复4魔法；防御减伤50%并回复8魔法。治疗与红蓝药只能选择存活队友。红药固定恢复${RECOVERY.red}点气血，蓝药固定恢复${RECOVERY.blue}点魔法，治疗技能恢复目标最大气血的30%（消耗10魔法），用药占用一次行动，目标已满时不消耗。禁药周两种药都不能使用。</div><div>战斗经验为固定总量，胜利后由本场实际参战宠物平分，倒下的宠物也有份。除不尽的余数按上阵顺序各补1点。</div><div>首领循环：普攻（部分首领低血时治疗）→ 蓄力 → 群攻。定身可打断已蓄力的群攻；速度快的控制宠更容易抢先出手。自动战斗会根据血量、魔法和首领行动选择技能。</div>${[...new Set(T.flatMap(x=>x.p.sk))].map(k=>`<div><b>${k}</b>：${SK[k]||''}</div>`).join('')}</details></div>`;
 }
 
 function view(){
@@ -620,7 +620,11 @@ function autoPick(t){
   t.cmd='a';t.tg=B.F.indexOf(focus);
   const useMeds=S.autoPotion&&!(B.tw&&wrule()==1);
   const needPotion=allies.filter(x=>x.hp*100<=x.mx*S.potionRules.red&&!B.T.some(y=>y.hp>0&&y.cmd=='h'&&B.T[y.tg]===x)).sort((x,y)=>x.hp/x.mx-y.hp/y.mx)[0];
-  if(useMeds&&S.potionRules.red>0&&medicineLeft('h')>0&&needPotion){t.cmd='h';t.tg=B.T.indexOf(needPotion);return}
+  if(useMeds&&S.potionRules.red>0&&medicineLeft('h')>0&&needPotion){
+    const missing=needPotion.mx-needPotion.hp;
+    t.cmd=canCast(t,'heal')&&Math.min(missing,healingAmount(needPotion))>=Math.min(missing,RECOVERY.red)?'heal':'h';
+    t.tg=B.T.indexOf(needPotion);return;
+  }
   if(canCast(t,'heal')&&injured.hp<injured.mx*.5){t.cmd='heal';t.tg=B.T.indexOf(injured);return}
   if(danger){
     if(canCast(t,'seal')&&!(danger.controlImmuneUntil>=B.r+1)){t.cmd='seal';t.tg=B.F.indexOf(danger);return}
@@ -668,6 +672,7 @@ function commit(c,tg){
   const n=nxt(B.pi+1);if(n<0)resolve();else{B.pi=n;render()}
 }
 function restoreMana(t,n){const h=Math.min(n,t.mm-t.mp);t.mp+=h;return h}
+const healingAmount=t=>Math.max(1,Math.round(t.mx*RECOVERY.heal));
 function healPet(t,n){const h=Math.max(0,Math.min(Math.round(n),t.mx-t.hp));if(t.hp<=0)return 0;t.hp+=h;return h}
 function hurtPet(t,d){
   if(t.hp<=0)return 0;const actual=Math.min(t.hp,d);t.hp=Math.max(0,t.hp-d);
@@ -696,7 +701,7 @@ function pAct(t){
     const id=MEDICINE[t.cmd],target=B.T[t.tg];
     if(!itemCount(id)||B.tw&&wrule()==1){L.push(p.n+'无法用药，改为普通攻击');t.cmd='a'}
     else if(!medicineNeeded(t.cmd,target)){L.push(p.n+'取消用药：目标已倒下或已恢复满，不消耗'+ITEMS[id].n);return}
-    else{S.bag[id]--;const amount=t.cmd=='h'?healPet(target,Math.max(1,Math.round(target.mx*.4))):restoreMana(target,Math.max(1,Math.round(target.mm*.4)));L.push(p.n+'为'+target.p.n+'使用'+ITEMS[id].n+'，恢复'+amount+(t.cmd=='h'?'气血':'魔法'));save();return}
+    else{S.bag[id]--;const amount=t.cmd=='h'?healPet(target,RECOVERY.red):restoreMana(target,RECOVERY.blue);L.push(p.n+'为'+target.p.n+'使用'+ITEMS[id].n+'，恢复'+amount+(t.cmd=='h'?'气血':'魔法'));save();return}
   }
   const cast=CAST[t.cmd];
   if(cast){
@@ -705,7 +710,7 @@ function pAct(t){
       t.mp-=cast.cost;L.push(p.n+'施放'+cast.skill+'，消耗'+cast.cost+'魔法');
       if(t.cmd=='heal'){
         let ally=B.T[t.tg];if(!ally||ally.hp<=0)ally=alive(B.T).sort((x,y)=>x.hp/x.mx-y.hp/y.mx)[0];
-        L.push('　'+ally.p.n+'恢复'+healPet(ally,a.mag*1.1+ally.mx*.1)+'气血');return;
+        L.push('　'+ally.p.n+'恢复'+healPet(ally,healingAmount(ally))+'气血');return;
       }
       if(t.cmd=='buff'){alive(B.T).forEach(x=>x.guardUntil=B.r+1);L.push('　全队获得护佑：本回合及下回合减伤25%');return}
       let f=B.F[t.tg];if(!f||f.hp<=0)f=al.slice().sort((x,y)=>x.hp-y.hp)[0];
