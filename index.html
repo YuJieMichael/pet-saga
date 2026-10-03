@@ -429,7 +429,7 @@ function syncFormation(){
   const old=Array.isArray(S.formation)?S.formation:[];
   S.formation=Array.from({length:3},(_,i)=>{const id=old[i];if(team.includes(id)&&!seen.has(id)){seen.add(id);return id}return null});
   for(const id of team){if(!seen.has(id)){S.formation[S.formation.indexOf(null)]=id;seen.add(id)}}
-  S.team=S.formation.filter(id=>id!==null);S.active=S.team[0];
+  S.team=S.formation.filter(id=>id!==null);S.active=S.team[0]||0;
 }
 function rosterPet(p){
   const blocked=B.run||p.job||isExploring(p.id)||p.life<=0;
@@ -437,10 +437,10 @@ function rosterPet(p){
 }
 function formationView(){
   const selected=get(S.sel);
-  return`<div class="card"><h3>⚔️ 上阵宠物 · ${S.team.length}/3</h3><div class="sub">${B.run?'战斗中不能调整阵容，请先停止连续自动并等本场结束。':'拖入栏位上阵或替换，栏位之间可换位；拖回下方宠物列表可下阵。手机按住“⠿ 拖动”移动。'}</div><div class="formation">${S.formation.map((id,i)=>{const pet=get(id);return`<div class="formation-slot ${pet?'filled':''}" data-team-slot="${i}"><div class="sub">栏位 ${i+1}</div>${pet?rosterPet(pet):'<div style="padding:24px 0;color:var(--sub)">＋<br>拖到这里</div>'}<div class="slot-actions"><button class="b alt" data-a="teamslot" data-v="${i}" ${B.run||!selected||selected.id===id?'disabled':''}>${selected?.id===id?'已在此栏':pet?'放入所选 / 换位':'放入所选'}</button>${pet?`<button class="b alt" data-a="teamremove" data-v="${id}" ${B.run||S.team.length<=1?'disabled':''}>下阵</button>`:''}</div></div>`}).join('')}</div><div class="sub">也可先点选下方宠物，再点栏位里的“放入所选”。${selected?'当前选择：'+selected.n:''}</div></div><div class="card" data-team-bench><h3>我的宠物 (${S.pets.length}/${PET_CAP})</h3><div class="roster-grid">${S.pets.map(rosterPet).join('')}</div></div>`;
+  return`<div class="card"><h3>⚔️ 上阵宠物 · ${S.team.length}/3</h3><div class="sub">${B.run?'战斗中不能调整阵容，请先停止连续自动并等本场结束。':'拖入栏位上阵或替换，栏位之间可换位；拖回下方宠物列表可下阵。手机按住“⠿ 拖动”移动。'}</div><div class="formation">${S.formation.map((id,i)=>{const pet=get(id);return`<div class="formation-slot ${pet?'filled':''}" data-team-slot="${i}"><div class="sub">栏位 ${i+1}</div>${pet?rosterPet(pet):'<div style="padding:24px 0;color:var(--sub)">＋<br>拖到这里</div>'}<div class="slot-actions"><button class="b alt" data-a="teamslot" data-v="${i}" ${B.run||!selected||selected.id===id?'disabled':''}>${selected?.id===id?'已在此栏':pet?'放入所选 / 换位':'放入所选'}</button>${pet?`<button class="b alt" data-a="teamremove" data-v="${id}" ${B.run?'disabled':''}>下阵</button>`:''}</div></div>`}).join('')}</div><div class="sub">也可先点选下方宠物，再点栏位里的“放入所选”。${selected?'当前选择：'+selected.n:''}</div></div><div class="card" data-team-bench><h3>我的宠物 (${S.pets.length}/${PET_CAP})</h3><div class="roster-grid">${S.pets.map(rosterPet).join('')}</div></div>`;
 }
 function finishFormation(message){
-  S.team=S.formation.filter(id=>id!==null);S.active=S.team[0];S.farmOn=false;S.farmHold=false;
+  S.team=S.formation.filter(id=>id!==null);S.active=S.team[0]||0;S.farmOn=false;S.farmHold=false;
   if(FARM_TIMER)clearTimeout(FARM_TIMER);stopAutoRun();B={run:0};save();render();toast(message);
 }
 function placeTeamPet(id,slot){
@@ -453,7 +453,7 @@ function placeTeamPet(id,slot){
 }
 function removeTeamPet(id){
   if(B.run)return;syncFormation();const from=S.formation.indexOf(id);if(from<0)return;
-  if(S.team.length<=1)return toast('至少保留一只上阵');S.formation[from]=null;finishFormation('已下阵');
+  S.formation[from]=null;finishFormation('已下阵');
 }
 function cancelRosterDrag(){
   if(ROSTER_DRAG?.started)ROSTER_NO_CLICK_UNTIL=Date.now()+400;
@@ -540,7 +540,7 @@ function view(){
   if(t=='dex')return dexView();
   if(t=='quest')return questView();
   if(t=='fight'){
-    const e=enemy(S.stage),tw=S.mode=='tower',hunt=S.mode=='hunt',F=B.F||curFoes(),T=B.T||S.team.map(get).filter(p=>p&&p.life>0).map(fighter),cur=B.run?B.T[B.pi]:null,totalExp=battleExpPool(F)*expBoostMultiplier();
+    const e=enemy(S.stage),tw=S.mode=='tower',hunt=S.mode=='hunt',F=B.F||curFoes(),T=B.T||availableBattlePets().map(fighter),cur=B.run?B.T[B.pi]:null,totalExp=battleExpPool(F)*expBoostMultiplier();
     return`${modeBar()}${tw?towerCard():hunt?huntCard():`<div class="card"><h3>世界地图 🏅${S.badges.length}/6${S.ng?' · 第'+(S.ng+1)+'周目':''}</h3><div class="row">${REG.map((r,i)=>`<button class="b ${e.ri===i?'':'alt'}" data-a="reg" data-v="${i}">${S.badges.includes(i)?'🏅':''}${r.n}${S.maxStage<i*5+1?' 🔒':''}</button>`).join('')}</div><div class="sub" style="margin-top:6px">${e.map}：${ELC[e.el]}${ELS[e.el]}系 · 馆主 ${REG[e.ri].e}${REG[e.ri].g}（第${e.ri*5+5}关）· 推荐带 ${ELC[BEAT.indexOf(e.el)]}${ELS[BEAT.indexOf(e.el)]}系宠物克制。首次击败馆主获得徽章：全队属性+2%、💎15。</div>${S.badges.length>=6?`<div class="row" style="margin-top:8px"><button class="b" data-a="ng">开启第${S.ng+2}周目：敌人更强、技能更多、奖励+50%</button></div>`:''}</div>
     <div class="card"><div class="row" style="justify-content:space-between"><button class="b alt" data-a="st" data-v="-1">◀</button><b>第 ${S.stage} 关 · ${e.map}</b><button class="b alt" data-a="st" data-v="1">▶</button></div><div class="sub" style="text-align:center;margin-top:4px">已解锁至第 ${S.maxStage} 关${e.b?' · BOSS关':''} · 奖励 ${Math.round(e.lv*12*(e.b?3:1)*(1+.5*S.ng))}🪙 · 在宠物页上阵最多3只</div></div>
     `}${!tw&&!hunt?`<div class="card"><button class="b ${S.farmOn?'':'alt'}" data-a="farm">${S.farmOn?'停止连续自动':'开启连续自动'}</button><div class="sub" style="margin-top:6px">${S.farmOn?(S.farmHold?'固定刷第 '+S.stage+' 关':'自动挑战新关；失败后退回上一关持续刷'):'连续自动只在页面打开时运行；退到后台按离线收益结算。'}</div></div>`:''}${!hunt||S.hunt.clears<3?`<div class="card sub">本场总经验 <b>${totalExp}</b>${expBoostMultiplier()==2?'（含经验丹+100%）':' '} · ${T.length?'按 '+T.length+' 只参战平分，每只 '+Math.floor(totalExp/T.length)+(totalExp%T.length?'～'+Math.ceil(totalExp/T.length):'')+' 点':'请先上阵可参战宠物'}<br>胜利后结算，倒下的参战宠物也能获得经验。</div>`:''}${battleArena(F,T,cur)}
@@ -579,11 +579,17 @@ function scheduleFarm(){
   if(!S.farmOn||S.mode!='main'||B.run||document.hidden)return;
   FARM_TIMER=setTimeout(()=>{FARM_TIMER=null;if(!S.farmOn||S.mode!='main'||B.run||document.hidden)return;bstart();if(B.run){autoRun();render()}else{S.farmOn=false;save();render()}},700);
 }
+const availableBattlePets=()=>S.team.map(get).filter(p=>p&&p.life>0&&!p.job&&!isExploring(p.id));
+function canStartBattle(){
+  if(!S.team.length){toast('请至少上阵一只宠物再开始战斗');return false}
+  if(!availableBattlePets().length){toast('上阵宠物无法参战，请换上寿命大于0且空闲的宠物');return false}
+  return true;
+}
 function bstart(){
   if(B.run)return;
+  if(!canStartBattle())return;
   if(S.mode=='hunt'){huntRoll();if(S.hunt.clears>=3)return toast('今日悬赏已完成，明天再来')}
-  const ps=S.team.map(get).filter(p=>p&&p.life>0);
-  if(!ps.length)return toast('请先上阵宠物（寿命需大于0）');
+  const ps=availableBattlePets();
   B={run:1,tw:S.mode=='tower',hunt:S.mode=='hunt',r:0,auto:0,pi:0,pend:null,T:ps.map(fighter),F:curFoes()};
   LOGL=['遭遇 '+B.F.map(f=>f.n).join('、')+'！'];
   if(B.F.some(f=>f.boss))LOGL.push('首领规律：普攻／治疗 → 蓄力 → 群攻；定身可打断已蓄力的群攻。');
@@ -837,7 +843,7 @@ function act(a,v){
   else if(a=='buyitem'){const [id,n]=String(v).split(',');buyItem(id,Number(n))}
   else if(a=='useitem'){useGrowthItem(v,p)}
   else if(a=='bagmed'){if(!B.run)return toast('红蓝药在战斗中使用');if(B.auto)return toast('请先停止自动战斗再选择用药');if(!MEDICINE[v])return;S.tab='fight';bpick(v);render();return}
-  else if(a=='act'&&p){if(p.job)return toast('派遣中，请先收回');if(isExploring(p.id))return toast('探险中，请先召回');const i=S.team.indexOf(p.id);if(i>=0){if(S.team.length<2)return toast('至少保留一只上阵');S.team.splice(i,1);toast('已下阵')}else{if(S.team.length>=3)return toast('最多上阵3只');if(p.life<=0)return toast('寿命已尽');S.team.push(p.id);toast('已上阵')}S.active=S.team[0];B={run:0}}
+  else if(a=='act'&&p){if(S.team.includes(p.id))removeTeamPet(p.id);else{syncFormation();const slot=S.formation.indexOf(null);if(slot<0)return toast('最多上阵3只');placeTeamPet(p.id,slot)}return}
   else if(a=='pt'&&p){
     const [key,n]=String(v).split(','),i=Number(key);
     if(!Number.isInteger(i)||i<0||i>=p.at.length||!['-1','1','5','all'].includes(n))return;
@@ -865,7 +871,7 @@ function act(a,v){
   else if(a=='rel'&&p){
     if(S.pets.length<2)return toast('至少保留一只宠物');if(isExploring(p.id)||p.job)return toast('请先收回探险或派遣中的宠物');
     if(REL!==p.id){REL=p.id;toast('再点一次确认放生')}
-    else{S.pets=S.pets.filter(q=>q.id!==p.id);REL=0;S.sel=S.pets[0].id;S.team=S.team.filter(x=>x!==p.id);if(!S.team.length)S.team=[S.sel];S.active=S.team[0]}
+    else{S.pets=S.pets.filter(q=>q.id!==p.id);REL=0;S.sel=S.pets[0].id;S.team=S.team.filter(x=>x!==p.id);S.active=S.team[0]||0}
   }
   else if(a=='st'){S.farmOn=false;S.farmHold=false;if(FARM_TIMER)clearTimeout(FARM_TIMER);stopAutoRun();B={run:0};LOGL=[];if(S.mode=='tower')S.floor=Math.max(1,Math.min(S.tower+1,S.floor+ +v));else S.stage=Math.max(1,Math.min(S.maxStage,S.stage+ +v))}
   else if(a=='bstart')return bstart();
@@ -876,7 +882,7 @@ function act(a,v){
   else if(a=='tgt'){if(B.run)btgt(+v);return}
   else if(a=='ally'){if(B.run)btgt(+v,'ally');return}
   else if(a=='auto'){if(!B.run)return;if(B.auto){stopAutoRun();S.farmOn=false;S.farmHold=false;save()}else autoRun();render();return}
-  else if(a=='farm'){if(S.mode!='main')return;if(S.farmOn){S.farmOn=false;S.farmHold=false;if(FARM_TIMER)clearTimeout(FARM_TIMER);toast(B.run?'本场战斗结束后停止连续自动':'连续自动已停止')}else{S.farmOn=true;S.farmHold=S.stage<S.maxStage||S.stage>=30;if(B.run)autoRun();else scheduleFarm();toast('连续自动已开启')}}
+  else if(a=='farm'){if(S.mode!='main')return;if(!S.farmOn&&!canStartBattle())return;if(S.farmOn){S.farmOn=false;S.farmHold=false;if(FARM_TIMER)clearTimeout(FARM_TIMER);toast(B.run?'本场战斗结束后停止连续自动':'连续自动已停止')}else{S.farmOn=true;S.farmHold=S.stage<S.maxStage||S.stage>=30;if(B.run)autoRun();else scheduleFarm();toast('连续自动已开启')}}
   else if(a=='evo'&&p){
     const r=evoReq(p);if(!r)return toast('已是最终形态');
     if(p.lv<r.lv)return toast('需要 Lv'+r.lv);if(p.loy<80)return toast('忠诚度需≥80，请喂食');
@@ -925,7 +931,7 @@ function act(a,v){
     if(sk.length<slots(n)&&Math.random()<.15){const fresh=SKN.filter(k=>!sk.includes(k));if(fresh.length)sk.push(pick(fresh))}
     n.sk=sk.slice(0,slots(n));
     S.pets=S.pets.filter(q=>q.id!==x.id&&q.id!==y.id);S.pets.push(n);dx(n);
-    S.team=S.team.filter(x=>get(x));if(!S.team.length)S.team=[n.id];S.active=S.team[0];S.sel=n.id;S.mg=[];qp('fuse');LAST=n;S.tab='pets';toast('炼化成功: '+n.n+'，继承'+inherited+'个技能'+(resonance?' · 技能共鸣！':''));
+    S.team=S.team.filter(x=>get(x));S.active=S.team[0]||0;S.sel=n.id;S.mg=[];qp('fuse');LAST=n;S.tab='pets';toast('炼化成功: '+n.n+'，继承'+inherited+'个技能'+(resonance?' · 技能共鸣！':''));
   }
   else if(a=='ad'){toast('广告播放中… (演示)');setTimeout(()=>{S.coins+=100;save();render();toast('奖励 +100🪙')},1500);return}
   else if(a=='daily'){const d=new Date().toDateString();if(S.day===d)return toast('今天已领取');S.day=d;S.gems+=10;toast('+10💎')}
@@ -946,7 +952,7 @@ S.pets.forEach(p=>{
   else p.sk=p.sk.filter(k=>!BADSK.includes(k));
 });checkOff();
 if(!S.pets.length){for(let i=0;i<3;i++)S.pets.push(mk((i*2+RI(0,1))%6,5,i?0:1));S.active=S.sel=S.pets[0].id;S.team=S.pets.map(x=>x.id)}
-if(!S.team||!S.team.length)S.team=[S.active];S.team=S.team.filter(x=>get(x));if(!S.team.length)S.team=[S.pets[0].id];S.active=S.team[0];
+if(!Array.isArray(S.team))S.team=get(S.active)?[S.active]:[];S.team=[...new Set(S.team)].filter(x=>get(x)).slice(0,3);S.active=S.team[0]||0;
 dqRoll();S.pets.forEach(dx);if(!get(S.sel))S.sel=S.pets[0].id;if(S.mode!='main')S.farmOn=false;
 render();if(S.farmOn)scheduleFarm();
 document.addEventListener('visibilitychange',()=>{if(document.hidden){if(FARM_TIMER)clearTimeout(FARM_TIMER);stopAutoRun();S.last=Date.now();save()}else{checkOff();if(S.farmOn){if(B.run)autoRun();else scheduleFarm()}render()}});
